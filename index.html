@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -932,15 +933,23 @@
   }
 
   // ── Output Suggestions ───────────────────────────
+  let currentSuggestions = [];
+
   function clearSuggestions() {
+    currentSuggestions = [];
     document.getElementById('suggestions-box').classList.remove('visible');
   }
 
-  function useSuggestion(text, el) {
+  function useSuggestion(index) {
+    const text = currentSuggestions[index];
+    if (!text) return;
     document.getElementById('goal-detail').value = text;
     document.querySelectorAll('.suggestion-chip').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-    el.querySelector('.chip-use-btn').textContent = 'Used';
+    const chip = document.getElementById('chip-' + index);
+    if (chip) {
+      chip.classList.add('selected');
+      chip.querySelector('.chip-use-btn').textContent = 'Used';
+    }
   }
 
   function suggestOutputs() {
@@ -948,14 +957,14 @@
     const category = document.getElementById('goal-category').value;
     if (!title) { alert('Please enter a goal title first.'); return; }
 
-    const suggestions = generateSuggestions(title, category);
+    currentSuggestions = generateSuggestions(title, category);
     const box   = document.getElementById('suggestions-box');
     const chips = document.getElementById('suggestion-chips');
 
-    chips.innerHTML = suggestions.map((s, i) => `
-      <div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${JSON.stringify(escAttr(s))}, this)">
+    chips.innerHTML = currentSuggestions.map((s, i) => `
+      <div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${i})">
         <span style="flex:1">${escHtml(s)}</span>
-        <button class="chip-use-btn" onclick="event.stopPropagation(); useSuggestion(${JSON.stringify(escAttr(s))}, document.getElementById('chip-${i}'))">Use</button>
+        <button class="chip-use-btn" onclick="event.stopPropagation(); useSuggestion(${i})">Use</button>
       </div>
     `).join('');
     box.classList.add('visible');
