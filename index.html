@@ -5,6 +5,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>My Task Tracker</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -14,12 +20,39 @@
       padding: 28px 16px 56px;
       color: #c9d6e8;
     }
+
+    /* Login Screen */
+    #login-screen {
+      position: fixed; inset: 0; background: #07101f;
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .login-card {
+      background: #0d1c2e; border: 1px solid #1a2d45;
+      border-radius: 16px; padding: 48px 40px;
+      text-align: center; max-width: 380px; width: 100%;
+    }
+    .login-title { font-size: 1.5rem; font-weight: 700; color: #e8f0fc; margin-bottom: 8px; }
+    .login-sub   { font-size: 0.88rem; color: #3a6ea8; margin-bottom: 32px; line-height: 1.6; }
+    .google-btn  {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: #fff; color: #1a1a1a; border: none; border-radius: 8px;
+      padding: 12px 24px; font-size: 0.92rem; font-weight: 600;
+      cursor: pointer; width: 100%; transition: background 0.2s;
+    }
+    .google-btn:hover { background: #f0f0f0; }
+
+    /* Header */
     .page-header {
       max-width: 760px; margin: 0 auto 24px;
       display: flex; justify-content: space-between; align-items: flex-start;
     }
     .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #e8f0fc; letter-spacing: 0.02em; }
     .page-header p  { font-size: 0.82rem; color: #3a6ea8; margin-top: 3px; }
+    .header-right   { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .user-email     { font-size: 0.72rem; color: #3a6ea8; }
+    .signout-btn    { background: transparent; border: 1px solid #1a2d45; color: #4d6a8a; border-radius: 6px; padding: 3px 10px; font-size: 0.72rem; cursor: pointer; }
+    .signout-btn:hover { border-color: #dc2626; color: #f87171; }
+    #save-indicator { font-size: 0.68rem; color: #3a6ea8; }
 
     /* Tabs */
     .tab-bar {
@@ -120,10 +153,7 @@
     .task-card.done { opacity: 0.45; }
     .task-card.done .task-name { text-decoration: line-through; color: #4d6a8a; }
 
-    .drag-handle {
-      color: #1a2d45; cursor: grab; font-size: 1rem;
-      padding: 0 4px; margin-top: 2px; user-select: none; line-height: 1.1;
-    }
+    .drag-handle { color: #1a2d45; cursor: grab; font-size: 1rem; padding: 0 4px; margin-top: 2px; user-select: none; line-height: 1.1; }
     .drag-handle:hover { color: #3a6ea8; }
     .task-check {
       width: 18px; height: 18px; min-width: 18px;
@@ -266,7 +296,7 @@
     .badge-status-complete    { background: #061a0e; color: #4ade80; border: 1px solid #14532d; }
     .badge-status-in-progress { background: #071428; color: #60a5fa; border: 1px solid #1e3a5f; }
     .badge-status-on-track    { background: #1f1500; color: #fbbf24; border: 1px solid #78350f; }
-    .badge-status-not-started { background: #0d1c2e;  color: #4d6a8a; border: 1px solid #1a2d45; }
+    .badge-status-not-started { background: #0d1c2e; color: #4d6a8a; border: 1px solid #1a2d45; }
 
     .goals-copy-bar { max-width: 760px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .goals-copy-bar p { font-size: 0.81rem; color: #3a6ea8; }
@@ -315,11 +345,38 @@
 </head>
 <body>
 
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="font-size:2rem;margin-bottom:12px;">&#128203;</div>
+    <div class="login-title">My Task Tracker</div>
+    <div class="login-sub">Sign in with your Google account to save your data to the cloud and access it from any device.</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.17z"/>
+        <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/>
+        <path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/>
+        <path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <p style="font-size:0.72rem;color:#1a2d45;margin-top:20px;">Your data is private and only accessible to you.</p>
+  </div>
+</div>
+
+<!-- ═══ APP CONTENT ═══ -->
+<div id="app-content" style="display:none;">
+
 <!-- Header -->
 <div class="page-header">
   <div>
     <h1>My Task Tracker</h1>
     <p id="header-date"></p>
+  </div>
+  <div class="header-right">
+    <span class="user-email" id="user-email"></span>
+    <span id="save-indicator"></span>
+    <button class="signout-btn" onclick="doSignOut()">Sign out</button>
   </div>
 </div>
 
@@ -331,7 +388,7 @@
   <button class="tab-btn" onclick="switchTab('reports',this)">Reports</button>
 </div>
 
-<!-- =============== TAB 1: TASKS =============== -->
+<!-- ═══ TAB 1: TASKS ═══ -->
 <div id="tab-tasks" class="tab-pane active">
 
   <div class="due-today-banner" id="due-today-banner">
@@ -470,7 +527,7 @@
   </div>
 </div>
 
-<!-- =============== TAB 2: GOALS =============== -->
+<!-- ═══ TAB 2: GOALS ═══ -->
 <div id="tab-goals" class="tab-pane">
   <div class="card">
     <div class="card-title">Add Goal or Output</div>
@@ -515,7 +572,7 @@
   <div class="goal-list" id="goal-list"></div>
 </div>
 
-<!-- =============== TAB 3: CHECKOUT =============== -->
+<!-- ═══ TAB 3: CHECKOUT ═══ -->
 <div id="tab-checkout" class="tab-pane">
   <div class="checkout-copy-bar">
     <p>Tasks you mark complete in Tab 1 appear here automatically.</p>
@@ -528,14 +585,11 @@
   <div class="checkout-list" id="checkout-list"></div>
 </div>
 
-<!-- =============== TAB 4: REPORTS =============== -->
+<!-- ═══ TAB 4: REPORTS ═══ -->
 <div id="tab-reports" class="tab-pane">
-
   <div class="card">
     <div class="card-title">Morning Check-in</div>
-    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">
-      Casual morning message for your boss — pulls from your active goals and priority tasks. You can edit it before copying.
-    </p>
+    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">Casual morning message for your boss — pulls from your active goals and priority tasks. Edit before copying.</p>
     <div class="report-output" id="morning-preview" contenteditable="true" spellcheck="false"></div>
     <div class="report-btn-row">
       <button class="primary-btn" onclick="generateMorningSMS()">Regenerate</button>
@@ -545,9 +599,7 @@
 
   <div class="card">
     <div class="card-title">End of Day Report</div>
-    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">
-      What you accomplished, what's still in progress, and tomorrow's priorities. Edit before sending.
-    </p>
+    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">What you accomplished, what's still in progress, and tomorrow's priorities. Edit before sending.</p>
     <div class="report-output" id="eod-preview" contenteditable="true" spellcheck="false"></div>
     <div class="report-btn-row">
       <button class="primary-btn" onclick="generateEOD()">Generate</button>
@@ -557,53 +609,155 @@
 
   <div class="card">
     <div class="card-title">Daily Notes</div>
-    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">
-      Jot down anything worth noting — ideas, blockers, reminders. Auto-saved as you type.
-    </p>
+    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">Jot down anything worth noting — ideas, blockers, reminders. Auto-saved as you type.</p>
     <textarea class="notes-area" id="daily-notes" placeholder="Write anything here..."></textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
       <span style="font-size:0.75rem;color:#3a6ea8;" id="notes-saved-label"></span>
       <button class="ghost-btn" id="notes-copy-btn" onclick="copyEl('daily-notes','notes-copy-btn')">Copy Notes</button>
     </div>
   </div>
-
 </div>
 
-<script>
-  // ── Storage ──────────────────────────────────────────────────────────────────
-  let tasks         = JSON.parse(localStorage.getItem('mtt_tasks') || '[]');
-  let goals         = JSON.parse(localStorage.getItem('mtt_goals') || '[]');
-  let completionLog = JSON.parse(localStorage.getItem('mtt_log')   || '[]');
-  let dailyNotes    = JSON.parse(localStorage.getItem('mtt_notes') || '{}');
-  let nextTaskId    = parseInt(localStorage.getItem('mtt_tid')     || '1');
-  let nextGoalId    = parseInt(localStorage.getItem('mtt_gid')     || '1');
+</div><!-- end #app-content -->
 
-  // Migrate old format
-  const _old = localStorage.getItem('myTaskTrackerTasks');
-  if (_old && !tasks.length) { tasks = JSON.parse(_old); save(); }
+<script>
+  // ═══ FIREBASE SETUP ═══════════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey: "AIzaSyCk3Ys_DbwvLAK4-j5P0CP7-pjqKMXsDlc",
+    authDomain: "task-tracker-fb583.firebaseapp.com",
+    projectId: "task-tracker-fb583",
+    storageBucket: "task-tracker-fb583.firebasestorage.app",
+    messagingSenderId: "814324137943",
+    appId: "1:814324137943:web:49f920611d47fd9c935592",
+    measurementId: "G-3J2WQXMHLL"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+  let currentUser = null;
+
+  // Sign in / out
+  function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => {
+      alert('Sign-in failed: ' + err.message);
+    });
+  }
+  function doSignOut() {
+    if (confirm('Sign out?')) auth.signOut();
+  }
+
+  // Auth state
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('login-screen').style.display  = 'none';
+      document.getElementById('app-content').style.display   = 'block';
+      document.getElementById('user-email').textContent      = user.displayName || user.email;
+      await loadFromCloud();
+      renderTasks();
+    } else {
+      currentUser = null;
+      document.getElementById('login-screen').style.display  = 'flex';
+      document.getElementById('app-content').style.display   = 'none';
+    }
+  });
+
+  // Load from Firestore
+  async function loadFromCloud() {
+    try {
+      showIndicator('Loading...');
+      const doc = await db.collection('users').doc(currentUser.uid).get();
+      if (doc.exists) {
+        const d   = doc.data();
+        tasks         = d.tasks         || [];
+        goals         = d.goals         || [];
+        completionLog = d.completionLog || [];
+        dailyNotes    = d.dailyNotes    || {};
+        nextTaskId    = d.nextTaskId    || 1;
+        nextGoalId    = d.nextGoalId    || 1;
+        showIndicator('');
+      } else {
+        // First time — migrate any existing localStorage data
+        const localTasks = localStorage.getItem('mtt_tasks');
+        if (localTasks) {
+          tasks         = JSON.parse(localTasks);
+          goals         = JSON.parse(localStorage.getItem('mtt_goals') || '[]');
+          completionLog = JSON.parse(localStorage.getItem('mtt_log')   || '[]');
+          dailyNotes    = JSON.parse(localStorage.getItem('mtt_notes') || '{}');
+          nextTaskId    = parseInt(localStorage.getItem('mtt_tid')     || '1');
+          nextGoalId    = parseInt(localStorage.getItem('mtt_gid')     || '1');
+          await saveToCloud();
+        }
+        showIndicator('');
+      }
+    } catch(e) {
+      showIndicator('Load failed — using local data');
+      console.error(e);
+    }
+  }
+
+  // Save to Firestore (debounced)
+  let _saveTimer = null;
+  function scheduleCloudSave() {
+    if (_saveTimer) clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveToCloud, 900);
+  }
+
+  async function saveToCloud() {
+    if (!currentUser) return;
+    showIndicator('Saving...');
+    try {
+      await db.collection('users').doc(currentUser.uid).set({
+        tasks, goals, completionLog, dailyNotes, nextTaskId, nextGoalId,
+        updatedAt: new Date().toISOString()
+      });
+      showIndicator('Saved &#10003;');
+      setTimeout(() => showIndicator(''), 2500);
+    } catch(e) {
+      showIndicator('Save failed');
+      console.error(e);
+    }
+  }
+
+  function showIndicator(msg) {
+    const el = document.getElementById('save-indicator');
+    if (el) el.innerHTML = msg;
+  }
+
+  // ═══ DATA ═════════════════════════════════════════════════════════
+  let tasks         = [];
+  let goals         = [];
+  let completionLog = [];
+  let dailyNotes    = {};
+  let nextTaskId    = 1;
+  let nextGoalId    = 1;
 
   function save() {
+    // Always cache locally too
     localStorage.setItem('mtt_tasks', JSON.stringify(tasks));
     localStorage.setItem('mtt_goals', JSON.stringify(goals));
     localStorage.setItem('mtt_log',   JSON.stringify(completionLog));
     localStorage.setItem('mtt_notes', JSON.stringify(dailyNotes));
     localStorage.setItem('mtt_tid',   String(nextTaskId));
     localStorage.setItem('mtt_gid',   String(nextGoalId));
+    scheduleCloudSave();
   }
 
-  // ── Dates ────────────────────────────────────────────────────────────────────
+  // ═══ DATES ════════════════════════════════════════════════════════
   const NOW      = new Date();
   const todayISO = NOW.toISOString().slice(0, 10);
   const todayStr = NOW.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-  document.getElementById('header-date').textContent = todayStr;
+  document.getElementById('header-date').textContent  = todayStr;
   document.getElementById('summary-date').textContent = todayStr;
 
   function recordToday() {
     if (!completionLog.includes(todayISO)) { completionLog.push(todayISO); save(); }
   }
 
-  // ── Tab switching ────────────────────────────────────────────────────────────
+  // ═══ TAB SWITCHING ════════════════════════════════════════════════
   function switchTab(tab, btn) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -614,16 +768,16 @@
     if (tab === 'reports')  { loadNotes(); generateMorningSMS(); }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // ═══ HELPERS ══════════════════════════════════════════════════════
   const cap     = s => s.charAt(0).toUpperCase() + s.slice(1);
   const esc     = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const fmtDate = due => !due ? '' : new Date(due + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-  const isOver  = due => { if (!due) return false; const n=new Date(); n.setHours(0,0,0,0); return new Date(due+'T00:00:00')<n; };
+  const fmtDate = due => !due ? '' : new Date(due+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const isOver  = due => { if(!due) return false; const n=new Date(); n.setHours(0,0,0,0); return new Date(due+'T00:00:00')<n; };
   function dueBadge(due) {
     if (!due) return 'badge-date';
     const n=new Date(); n.setHours(0,0,0,0);
     const d=(new Date(due+'T00:00:00')-n)/86400000;
-    return d<0 ? 'badge-date overdue' : d<=2 ? 'badge-date due-soon' : 'badge-date';
+    return d<0?'badge-date overdue':d<=2?'badge-date due-soon':'badge-date';
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -643,23 +797,21 @@
       done: false, archived: false, created: Date.now(), completedAt: null
     });
     save();
-    ['task-name','task-due','task-notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('task-recurring').value = 'none';
+    ['task-name','task-due','task-notes'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('task-recurring').value='none';
     renderTasks();
   }
 
   function toggleDone(id) {
-    const t = tasks.find(t => t.id === id); if (!t) return;
+    const t = tasks.find(t=>t.id===id); if(!t) return;
     t.done = !t.done;
     t.completedAt = t.done ? Date.now() : null;
-    // Recurring: auto-create next occurrence when checked off
-    if (t.done && t.recurring !== 'none') {
-      const copy = { ...t, id: nextTaskId++, done: false, completedAt: null,
-        created: Date.now(), subtasks: (t.subtasks||[]).map(s=>({...s,done:false})) };
-      const d = new Date();
-      if (t.recurring === 'daily')  d.setDate(d.getDate() + 1);
-      if (t.recurring === 'weekly') d.setDate(d.getDate() + 7);
-      copy.due = d.toISOString().slice(0, 10);
+    if (t.done && t.recurring!=='none') {
+      const copy={...t,id:nextTaskId++,done:false,completedAt:null,created:Date.now(),subtasks:(t.subtasks||[]).map(s=>({...s,done:false}))};
+      const d=new Date();
+      if (t.recurring==='daily')  d.setDate(d.getDate()+1);
+      if (t.recurring==='weekly') d.setDate(d.getDate()+7);
+      copy.due=d.toISOString().slice(0,10);
       tasks.unshift(copy);
     }
     if (t.done) recordToday();
@@ -667,131 +819,98 @@
     if (document.getElementById('tab-checkout').classList.contains('active')) renderCheckout();
   }
 
-  function archiveTask(id) {
-    const t = tasks.find(t => t.id === id);
-    if (t) { t.archived = true; save(); renderTasks(); }
-  }
-  function restoreTask(id) {
-    const t = tasks.find(t => t.id === id);
-    if (t) { t.archived = false; save(); renderTasks(); }
-  }
-  function deleteTask(id) {
-    if (!confirm('Delete this task?')) return;
-    tasks = tasks.filter(t => t.id !== id); save(); renderTasks();
-  }
-  function toggleEdit(id) { document.getElementById('edit-' + id).classList.toggle('open'); }
+  function archiveTask(id) { const t=tasks.find(t=>t.id===id); if(t){t.archived=true;save();renderTasks();} }
+  function restoreTask(id) { const t=tasks.find(t=>t.id===id); if(t){t.archived=false;save();renderTasks();} }
+  function deleteTask(id)  { if(!confirm('Delete this task?')) return; tasks=tasks.filter(t=>t.id!==id); save(); renderTasks(); }
+  function toggleEdit(id)  { document.getElementById('edit-'+id).classList.toggle('open'); }
+
   function saveEdit(id) {
-    const t = tasks.find(t => t.id === id); if (!t) return;
-    t.name      = document.getElementById('en-'+id).value.trim() || t.name;
-    t.priority  = document.getElementById('ep-'+id).value;
-    t.category  = document.getElementById('ec-'+id).value;
-    t.due       = document.getElementById('ed-'+id).value;
-    t.recurring = document.getElementById('er-'+id).value;
-    t.notes     = document.getElementById('eno-'+id).value.trim();
+    const t=tasks.find(t=>t.id===id); if(!t) return;
+    t.name     =document.getElementById('en-'+id).value.trim()||t.name;
+    t.priority =document.getElementById('ep-'+id).value;
+    t.category =document.getElementById('ec-'+id).value;
+    t.due      =document.getElementById('ed-'+id).value;
+    t.recurring=document.getElementById('er-'+id).value;
+    t.notes    =document.getElementById('eno-'+id).value.trim();
     save(); renderTasks();
   }
 
-  // Subtasks
-  function toggleSubtask(tid, idx) {
-    const t = tasks.find(t => t.id === tid);
-    if (t && t.subtasks && t.subtasks[idx] !== undefined) {
-      t.subtasks[idx].done = !t.subtasks[idx].done; save(); renderTasks();
-    }
+  function toggleSubtask(tid,idx) {
+    const t=tasks.find(t=>t.id===tid);
+    if(t&&t.subtasks&&t.subtasks[idx]!==undefined){t.subtasks[idx].done=!t.subtasks[idx].done;save();renderTasks();}
   }
   function addSubtask(tid) {
-    const inp = document.getElementById('sub-inp-'+tid);
-    const txt = inp.value.trim(); if (!txt) return;
-    const t = tasks.find(t => t.id === tid);
-    if (t) {
-      if (!t.subtasks) t.subtasks = [];
-      t.subtasks.push({ id: Date.now(), text: txt, done: false });
-      inp.value = ''; save(); renderTasks();
-      setTimeout(()=>{ const f=document.getElementById('edit-'+tid); if(f) f.classList.add('open'); },40);
-    }
+    const inp=document.getElementById('sub-inp-'+tid);
+    const txt=inp.value.trim(); if(!txt) return;
+    const t=tasks.find(t=>t.id===tid);
+    if(t){if(!t.subtasks)t.subtasks=[];t.subtasks.push({id:Date.now(),text:txt,done:false});inp.value='';save();renderTasks();setTimeout(()=>{const f=document.getElementById('edit-'+tid);if(f)f.classList.add('open');},40);}
   }
-  function deleteSubtask(tid, idx) {
-    const t = tasks.find(t => t.id === tid);
-    if (t) { t.subtasks.splice(idx,1); save(); renderTasks(); }
-  }
+  function deleteSubtask(tid,idx){const t=tasks.find(t=>t.id===tid);if(t){t.subtasks.splice(idx,1);save();renderTasks();}}
 
-  // Filters
   function clearFilters() {
-    ['filter-search','filter-status','filter-priority','filter-category'].forEach(id => {
-      const el = document.getElementById(id);
-      el.tagName==='INPUT' ? (el.value='') : (el.selectedIndex=0);
-    });
+    ['filter-search','filter-status','filter-priority','filter-category'].forEach(id=>{const el=document.getElementById(id);el.tagName==='INPUT'?(el.value=''):(el.selectedIndex=0);});
     renderTasks();
   }
   function filtered() {
-    const q  = document.getElementById('filter-search').value.toLowerCase();
-    const st = document.getElementById('filter-status').value;
-    const pr = document.getElementById('filter-priority').value;
-    const ca = document.getElementById('filter-category').value;
-    return tasks.filter(t => {
-      if (t.archived) return false;
-      if (q && !t.name.toLowerCase().includes(q) && !(t.notes||'').toLowerCase().includes(q)) return false;
-      if (st==='active' && t.done)  return false;
-      if (st==='done'   && !t.done) return false;
-      if (pr!=='all' && t.priority!==pr) return false;
-      if (ca!=='all' && t.category!==ca) return false;
+    const q=document.getElementById('filter-search').value.toLowerCase();
+    const st=document.getElementById('filter-status').value;
+    const pr=document.getElementById('filter-priority').value;
+    const ca=document.getElementById('filter-category').value;
+    return tasks.filter(t=>{
+      if(t.archived)return false;
+      if(q&&!t.name.toLowerCase().includes(q)&&!(t.notes||'').toLowerCase().includes(q))return false;
+      if(st==='active'&&t.done)return false;
+      if(st==='done'&&!t.done)return false;
+      if(pr!=='all'&&t.priority!==pr)return false;
+      if(ca!=='all'&&t.category!==ca)return false;
       return true;
     });
   }
 
-  // Due Today Banner
   function renderDueTodayBanner() {
-    const banner = document.getElementById('due-today-banner');
-    const items  = document.getElementById('due-today-items');
-    const due    = tasks.filter(t => !t.done && !t.archived && t.due===todayISO);
-    if (!due.length) { banner.classList.remove('visible'); return; }
+    const banner=document.getElementById('due-today-banner');
+    const items=document.getElementById('due-today-items');
+    const due=tasks.filter(t=>!t.done&&!t.archived&&t.due===todayISO);
+    if(!due.length){banner.classList.remove('visible');return;}
     banner.classList.add('visible');
-    items.innerHTML = due.map(t =>
-      `<div class="due-today-item"><span class="due-today-dot"></span>${esc(t.name)}<span style="font-size:0.72rem;color:#92400e;margin-left:4px;">[${t.category}]</span></div>`
-    ).join('');
+    items.innerHTML=due.map(t=>`<div class="due-today-item"><span class="due-today-dot"></span>${esc(t.name)}<span style="font-size:0.72rem;color:#92400e;margin-left:4px;">[${t.category}]</span></div>`).join('');
   }
 
-  // Render Tasks
   function renderTasks() {
-    const list     = document.getElementById('task-list');
-    const shown    = filtered();
-    const active   = tasks.filter(t => !t.done && !t.archived);
-    const done     = tasks.filter(t => t.done  && !t.archived);
-    const archived = tasks.filter(t => t.archived);
+    const list=document.getElementById('task-list');
+    const shown=filtered();
+    const active=tasks.filter(t=>!t.done&&!t.archived);
+    const done=tasks.filter(t=>t.done&&!t.archived);
+    const archived=tasks.filter(t=>t.archived);
 
-    document.getElementById('stats').innerHTML =
+    document.getElementById('stats').innerHTML=
       `<div class="stat-chip">Total <span>${tasks.filter(t=>!t.archived).length}</span></div>
        <div class="stat-chip">Done <span>${done.length}</span></div>
        <div class="stat-chip">Remaining <span>${active.length}</span></div>
        ${active.filter(t=>t.priority==='high').length?`<div class="stat-chip">High Priority <span>${active.filter(t=>t.priority==='high').length}</span></div>`:''}`;
 
-    // Archive section
-    document.getElementById('archive-section').style.display = archived.length ? 'block' : 'none';
-    document.getElementById('archive-count').textContent = archived.length;
-    document.getElementById('archive-list').innerHTML = archived.map(t =>
+    document.getElementById('archive-section').style.display=archived.length?'block':'none';
+    document.getElementById('archive-count').textContent=archived.length;
+    document.getElementById('archive-list').innerHTML=archived.map(t=>
       `<div class="archive-card">
         <div><div class="archive-card-name">${esc(t.name)}</div><div class="archive-card-meta">${t.category} · ${cap(t.priority)}</div></div>
         <div class="archive-actions">
           <button class="action-btn" onclick="restoreTask(${t.id})">Restore</button>
           <button class="action-btn delete" onclick="deleteTask(${t.id})">Delete</button>
         </div>
-      </div>`
-    ).join('');
+      </div>`).join('');
 
     renderDueTodayBanner();
 
-    if (!shown.length) { list.innerHTML = `<div class="empty-state">No tasks found.</div>`; renderSummary(); return; }
+    if(!shown.length){list.innerHTML=`<div class="empty-state">No tasks found.</div>`;renderSummary();return;}
 
-    const cats = ['Work','Personal','Health','Finance','Learning','Other'];
-    list.innerHTML = shown.map(t => {
-      const subs   = t.subtasks || [];
-      const subDon = subs.filter(s=>s.done).length;
+    const cats=['Work','Personal','Health','Finance','Learning','Other'];
+    list.innerHTML=shown.map(t=>{
+      const subs=t.subtasks||[];
+      const subDon=subs.filter(s=>s.done).length;
       return `
       <div class="task-card ${t.done?'done':''}" data-priority="${t.priority}" data-id="${t.id}"
-           draggable="true"
-           ondragstart="onDragStart(event,${t.id})"
-           ondragover="onDragOver(event)"
-           ondrop="onDrop(event,${t.id})"
-           ondragleave="onDragLeave(event)">
+           draggable="true" ondragstart="onDragStart(event,${t.id})" ondragover="onDragOver(event)" ondrop="onDrop(event,${t.id})" ondragleave="onDragLeave(event)">
         <div class="drag-handle" title="Drag to reorder">&#8942;</div>
         <div class="task-check ${t.done?'checked':''}" onclick="toggleDone(${t.id})">${t.done?'&#10003;':''}</div>
         <div class="task-body">
@@ -813,25 +932,14 @@
           <div class="edit-form" id="edit-${t.id}">
             <input type="text" id="en-${t.id}" value="${esc(t.name)}" placeholder="Task name" />
             <div class="form-row">
-              <select id="ep-${t.id}">
-                <option value="high"   ${t.priority==='high'  ?'selected':''}>High</option>
-                <option value="medium" ${t.priority==='medium'?'selected':''}>Medium</option>
-                <option value="low"    ${t.priority==='low'   ?'selected':''}>Low</option>
-              </select>
-              <select id="ec-${t.id}">
-                ${cats.map(c=>`<option value="${c}" ${t.category===c?'selected':''}>${c}</option>`).join('')}
-              </select>
+              <select id="ep-${t.id}"><option value="high" ${t.priority==='high'?'selected':''}>High</option><option value="medium" ${t.priority==='medium'?'selected':''}>Medium</option><option value="low" ${t.priority==='low'?'selected':''}>Low</option></select>
+              <select id="ec-${t.id}">${cats.map(c=>`<option value="${c}" ${t.category===c?'selected':''}>${c}</option>`).join('')}</select>
               <input type="date" id="ed-${t.id}" value="${t.due||''}" style="width:140px;" />
-              <select id="er-${t.id}">
-                <option value="none"   ${(t.recurring||'none')==='none'  ?'selected':''}>No Repeat</option>
-                <option value="daily"  ${t.recurring==='daily' ?'selected':''}>Daily</option>
-                <option value="weekly" ${t.recurring==='weekly'?'selected':''}>Weekly</option>
-              </select>
+              <select id="er-${t.id}"><option value="none" ${(t.recurring||'none')==='none'?'selected':''}>No Repeat</option><option value="daily" ${t.recurring==='daily'?'selected':''}>Daily</option><option value="weekly" ${t.recurring==='weekly'?'selected':''}>Weekly</option></select>
             </div>
             <textarea id="eno-${t.id}" placeholder="Notes">${esc(t.notes||'')}</textarea>
             <div class="subtask-input-row">
-              <input type="text" id="sub-inp-${t.id}" placeholder="Add a subtask..."
-                onkeydown="if(event.key==='Enter'){event.preventDefault();addSubtask(${t.id});}" />
+              <input type="text" id="sub-inp-${t.id}" placeholder="Add a subtask..." onkeydown="if(event.key==='Enter'){event.preventDefault();addSubtask(${t.id});}" />
               <button class="sub-add-btn" onclick="addSubtask(${t.id})">Add</button>
             </div>
             <button class="save-btn" onclick="saveEdit(${t.id})">Save Changes</button>
@@ -844,118 +952,80 @@
         </div>
       </div>`;
     }).join('');
-
     renderSummary();
   }
 
   // Drag & Drop
-  let dragId = null;
-  function onDragStart(e, id) { dragId = id; setTimeout(()=>e.target.classList.add('dragging'),0); }
-  function onDragOver(e)       { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-  function onDragLeave(e)      { e.currentTarget.classList.remove('drag-over'); }
-  function onDrop(e, targetId) {
-    e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-    if (dragId === null || dragId === targetId) return;
-    const fi = tasks.findIndex(t => t.id === dragId);
-    const ti = tasks.findIndex(t => t.id === targetId);
-    if (fi===-1 || ti===-1) return;
-    const [moved] = tasks.splice(fi, 1);
-    tasks.splice(ti, 0, moved);
-    dragId = null; save(); renderTasks();
+  let dragId=null;
+  function onDragStart(e,id){dragId=id;setTimeout(()=>e.target.classList.add('dragging'),0);}
+  function onDragOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over');}
+  function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+  function onDrop(e,targetId){
+    e.preventDefault();e.currentTarget.classList.remove('drag-over');
+    if(dragId===null||dragId===targetId)return;
+    const fi=tasks.findIndex(t=>t.id===dragId),ti=tasks.findIndex(t=>t.id===targetId);
+    if(fi===-1||ti===-1)return;
+    const[moved]=tasks.splice(fi,1);tasks.splice(ti,0,moved);
+    dragId=null;save();renderTasks();
   }
-  document.addEventListener('dragend', () => {
-    document.querySelectorAll('.task-card.dragging').forEach(el => el.classList.remove('dragging'));
-  });
+  document.addEventListener('dragend',()=>document.querySelectorAll('.task-card.dragging').forEach(el=>el.classList.remove('dragging')));
 
-  // Summary
-  function renderSummary() {
-    const body      = document.getElementById('summary-body');
-    const visible   = tasks.filter(t => !t.archived);
-    const active    = visible.filter(t => !t.done);
-    const completed = visible.filter(t => t.done);
-    if (!visible.length) { body.innerHTML=`<div class="empty-state">No tasks yet.</div>`; return; }
-    const pct     = visible.length ? Math.round((completed.length/visible.length)*100) : 0;
-    const overdue = active.filter(t => isOver(t.due));
-    const byP     = {high:[],medium:[],low:[]};
-    active.forEach(t => { if(byP[t.priority]) byP[t.priority].push(t); });
-    let html = '';
-    if (overdue.length) html+=`<div class="overdue-alert">${overdue.length} overdue task${overdue.length>1?'s':''} — needs your attention.</div>`;
-    html += `<div class="summary-grid">
+  function renderSummary(){
+    const body=document.getElementById('summary-body');
+    const visible=tasks.filter(t=>!t.archived);
+    const active=visible.filter(t=>!t.done);
+    const completed=visible.filter(t=>t.done);
+    if(!visible.length){body.innerHTML=`<div class="empty-state">No tasks yet.</div>`;return;}
+    const pct=visible.length?Math.round((completed.length/visible.length)*100):0;
+    const overdue=active.filter(t=>isOver(t.due));
+    const byP={high:[],medium:[],low:[]};
+    active.forEach(t=>{if(byP[t.priority])byP[t.priority].push(t);});
+    let html='';
+    if(overdue.length)html+=`<div class="overdue-alert">${overdue.length} overdue task${overdue.length>1?'s':''} — needs your attention.</div>`;
+    html+=`<div class="summary-grid">
       <div class="summary-stat"><div class="summary-stat-value">${visible.length}</div><div class="summary-stat-label">Total</div></div>
       <div class="summary-stat"><div class="summary-stat-value">${active.length}</div><div class="summary-stat-label">Remaining</div></div>
       <div class="summary-stat"><div class="summary-stat-value">${completed.length}</div><div class="summary-stat-label">Done</div></div>
       <div class="summary-stat"><div class="summary-stat-value">${pct}%</div><div class="summary-stat-label">Complete</div></div>
     </div><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>`;
-    if (active.length) {
+    if(active.length){
       html+=`<div class="summary-section"><div class="summary-section-title">Active Tasks</div>`;
-      ['high','medium','low'].forEach(p => byP[p].forEach(t => {
-        html+=`<div class="summary-row">
-          <span class="summary-dot dot-${p}"></span>
-          <span class="summary-task-name">${esc(t.name)}</span>
-          <span class="summary-meta">${t.category}</span>
-          ${t.due?`<span class="summary-meta">${fmtDate(t.due)}${isOver(t.due)?' · Overdue':''}</span>`:''}
-          <span class="summary-tag tag-${p}">${cap(p)}</span>
-        </div>`;
+      ['high','medium','low'].forEach(p=>byP[p].forEach(t=>{
+        html+=`<div class="summary-row"><span class="summary-dot dot-${p}"></span><span class="summary-task-name">${esc(t.name)}</span><span class="summary-meta">${t.category}</span>${t.due?`<span class="summary-meta">${fmtDate(t.due)}${isOver(t.due)?' · Overdue':''}</span>`:''}<span class="summary-tag tag-${p}">${cap(p)}</span></div>`;
       }));
       html+=`</div>`;
     }
-    if (completed.length) {
+    if(completed.length){
       html+=`<div class="summary-section"><div class="summary-section-title">Completed</div>`;
-      completed.forEach(t => {
-        html+=`<div class="summary-row">
-          <span class="summary-dot dot-done"></span>
-          <span class="summary-task-name done-text">${esc(t.name)}</span>
-          <span class="summary-meta">${t.category}</span>
-          <span class="summary-tag tag-done">Done</span>
-        </div>`;
-      });
+      completed.forEach(t=>{html+=`<div class="summary-row"><span class="summary-dot dot-done"></span><span class="summary-task-name done-text">${esc(t.name)}</span><span class="summary-meta">${t.category}</span><span class="summary-tag tag-done">Done</span></div>`;});
       html+=`</div>`;
     }
-    body.innerHTML = html;
+    body.innerHTML=html;
   }
 
-  function toggleArchive() {
-    const body  = document.getElementById('archive-body');
-    const arrow = document.getElementById('archive-arrow');
-    body.classList.toggle('open');
-    arrow.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+  function toggleArchive(){
+    const body=document.getElementById('archive-body'),arrow=document.getElementById('archive-arrow');
+    body.classList.toggle('open');arrow.style.transform=body.classList.contains('open')?'rotate(180deg)':'';
   }
 
   // ═══════════════════════════════════════════════════════════════════
   // TAB 2 — GOALS
   // ═══════════════════════════════════════════════════════════════════
-  function addGoal() {
-    const title = document.getElementById('goal-title').value.trim();
-    if (!title) { alert('Please enter a goal title.'); return; }
-    goals.unshift({
-      id: nextGoalId++, title,
-      category: document.getElementById('goal-category').value,
-      status:   document.getElementById('goal-status').value,
-      due:      document.getElementById('goal-due').value,
-      detail:   document.getElementById('goal-detail').value.trim(),
-      created:  Date.now()
-    });
-    save();
-    ['goal-title','goal-due','goal-detail'].forEach(id => document.getElementById(id).value='');
-    clearSuggestions(); renderGoals();
+  function addGoal(){
+    const title=document.getElementById('goal-title').value.trim();
+    if(!title){alert('Please enter a goal title.');return;}
+    goals.unshift({id:nextGoalId++,title,category:document.getElementById('goal-category').value,status:document.getElementById('goal-status').value,due:document.getElementById('goal-due').value,detail:document.getElementById('goal-detail').value.trim(),created:Date.now()});
+    save();['goal-title','goal-due','goal-detail'].forEach(id=>document.getElementById(id).value='');clearSuggestions();renderGoals();
   }
+  function deleteGoal(id){if(!confirm('Delete this goal?'))return;goals=goals.filter(g=>g.id!==id);save();renderGoals();}
+  function setGoalStatus(id,status){const g=goals.find(g=>g.id===id);if(g){g.status=status;save();renderGoals();}}
 
-  function deleteGoal(id) {
-    if (!confirm('Delete this goal?')) return;
-    goals=goals.filter(g=>g.id!==id); save(); renderGoals();
-  }
+  const statusLabel={'not-started':'Not Started','in-progress':'In Progress','on-track':'On Track','complete':'Complete'};
 
-  function setGoalStatus(id, status) {
-    const g = goals.find(g=>g.id===id);
-    if (g) { g.status=status; save(); renderGoals(); }
-  }
-
-  const statusLabel = {'not-started':'Not Started','in-progress':'In Progress','on-track':'On Track','complete':'Complete'};
-
-  function renderGoals() {
-    const list = document.getElementById('goal-list');
-    if (!goals.length) { list.innerHTML=`<div class="empty-state">No goals yet.</div>`; return; }
-    list.innerHTML = goals.map(g => `
+  function renderGoals(){
+    const list=document.getElementById('goal-list');
+    if(!goals.length){list.innerHTML=`<div class="empty-state">No goals yet.</div>`;return;}
+    list.innerHTML=goals.map(g=>`
       <div class="goal-card" data-status="${g.status}">
         <div class="goal-top">
           <div class="goal-body">
@@ -974,65 +1044,50 @@
             <button class="action-btn delete" onclick="deleteGoal(${g.id})">Delete</button>
           </div>
         </div>
-      </div>`
-    ).join('');
-  }
-
-  function generateGoalsReport() {
-    const box = document.getElementById('goals-output-box');
-    if (!goals.length) { box.textContent='No goals to report yet.'; box.classList.add('visible'); return; }
-    const g = {'in-progress':[],'on-track':[],'not-started':[],'complete':[]};
-    goals.forEach(x => { if(g[x.status]) g[x.status].push(x); });
-    let text = `GOALS & OUTPUTS REPORT\n${todayStr}\n${'─'.repeat(40)}\n\n`;
-    ['in-progress','on-track','not-started','complete'].forEach(s => {
-      if (!g[s].length) return;
-      text += `${statusLabel[s].toUpperCase()}\n`;
-      g[s].forEach(x => {
-        text += `  - ${x.title}${x.due?`  [Due: ${fmtDate(x.due)}]`:''}  [${x.category}]\n`;
-        if (x.detail) text += `    ${x.detail}\n`;
-      });
-      text += '\n';
-    });
-    box.textContent = text.trim(); box.classList.add('visible');
-  }
-
-  function copyGoalsReport() {
-    generateGoalsReport();
-    navigator.clipboard.writeText(document.getElementById('goals-output-box').textContent).then(()=>{
-      const btn = document.getElementById('goals-copy-btn');
-      btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy to Clipboard',2000);
-    });
-  }
-
-  // Output Suggestions
-  let currentSuggestions = [];
-  function clearSuggestions() {
-    currentSuggestions=[];
-    document.getElementById('suggestions-box').classList.remove('visible');
-  }
-  function useSuggestion(i) {
-    const text = currentSuggestions[i]; if (!text) return;
-    document.getElementById('goal-detail').value = text;
-    document.querySelectorAll('.suggestion-chip').forEach(c=>c.classList.remove('selected'));
-    const chip = document.getElementById('chip-'+i);
-    if (chip) { chip.classList.add('selected'); chip.querySelector('.chip-use-btn').textContent='Used'; }
-  }
-  function suggestOutputs() {
-    const title    = document.getElementById('goal-title').value.trim();
-    const category = document.getElementById('goal-category').value;
-    if (!title) { alert('Please enter a goal title first.'); return; }
-    currentSuggestions = buildSuggestions(title, category);
-    document.getElementById('suggestion-chips').innerHTML = currentSuggestions.map((s,i)=>
-      `<div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${i})">
-        <span style="flex:1">${esc(s)}</span>
-        <button class="chip-use-btn" onclick="event.stopPropagation();useSuggestion(${i})">Use</button>
       </div>`).join('');
+  }
+
+  function generateGoalsReport(){
+    const box=document.getElementById('goals-output-box');
+    if(!goals.length){box.textContent='No goals to report yet.';box.classList.add('visible');return;}
+    const g={'in-progress':[],'on-track':[],'not-started':[],'complete':[]};
+    goals.forEach(x=>{if(g[x.status])g[x.status].push(x);});
+    let text=`GOALS & OUTPUTS REPORT\n${todayStr}\n${'─'.repeat(40)}\n\n`;
+    ['in-progress','on-track','not-started','complete'].forEach(s=>{
+      if(!g[s].length)return;
+      text+=`${statusLabel[s].toUpperCase()}\n`;
+      g[s].forEach(x=>{text+=`  - ${x.title}${x.due?`  [Due: ${fmtDate(x.due)}]`:''}  [${x.category}]\n`;if(x.detail)text+=`    ${x.detail}\n`;});
+      text+='\n';
+    });
+    box.textContent=text.trim();box.classList.add('visible');
+  }
+  function copyGoalsReport(){
+    generateGoalsReport();
+    navigator.clipboard.writeText(document.getElementById('goals-output-box').textContent).then(()=>{const btn=document.getElementById('goals-copy-btn');btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to Clipboard',2000);});
+  }
+
+  let currentSuggestions=[];
+  function clearSuggestions(){currentSuggestions=[];document.getElementById('suggestions-box').classList.remove('visible');}
+  function useSuggestion(i){
+    const text=currentSuggestions[i];if(!text)return;
+    document.getElementById('goal-detail').value=text;
+    document.querySelectorAll('.suggestion-chip').forEach(c=>c.classList.remove('selected'));
+    const chip=document.getElementById('chip-'+i);
+    if(chip){chip.classList.add('selected');chip.querySelector('.chip-use-btn').textContent='Used';}
+  }
+  function suggestOutputs(){
+    const title=document.getElementById('goal-title').value.trim();
+    const category=document.getElementById('goal-category').value;
+    if(!title){alert('Please enter a goal title first.');return;}
+    currentSuggestions=buildSuggestions(title,category);
+    document.getElementById('suggestion-chips').innerHTML=currentSuggestions.map((s,i)=>
+      `<div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${i})"><span style="flex:1">${esc(s)}</span><button class="chip-use-btn" onclick="event.stopPropagation();useSuggestion(${i})">Use</button></div>`).join('');
     document.getElementById('suggestions-box').classList.add('visible');
   }
-  function buildSuggestions(title, category) {
-    const t=title.toLowerCase(), out=[];
+  function buildSuggestions(title,category){
+    const t=title.toLowerCase(),out=[];
     const map=[
-      {v:['report','reporting'],o:['Written report summarizing findings and key data points','Executive summary (1-2 pages) with recommendations','Data analysis spreadsheet with supporting charts']},
+      {v:['report','reporting'],o:['Written report summarizing findings and key data points','Executive summary with recommendations','Data analysis spreadsheet with supporting charts']},
       {v:['present','presentation','deck','slide'],o:['Slide deck ready for presentation','Speaker notes and talking points document','One-page handout summarizing key takeaways']},
       {v:['plan','planning','roadmap','strategy'],o:['Written project plan with milestones and timeline','Roadmap document outlining phases and deliverables','Risk and dependency matrix']},
       {v:['review','audit','evaluate','assess','analysis','analyze'],o:['Review document with findings, gaps, and recommendations','Evaluation scorecard or assessment matrix','Action plan based on review outcomes']},
@@ -1045,16 +1100,8 @@
       {v:['launch','release','deploy','rollout'],o:['Launch checklist completed and signed off','Rollout communication sent to stakeholders','Post-launch status report with metrics']},
       {v:['document','write','draft','proposal'],o:['Draft completed and ready for review','Final document approved and filed','Version shared with relevant stakeholders']}
     ];
-    const fb={
-      'Work':    ['Deliverable completed and submitted','Status update shared with manager','Documentation filed in shared workspace'],
-      'Project': ['Project milestone completed on schedule','Status report distributed to team','Risks and blockers logged in tracker'],
-      'Team':    ['Team informed and aligned on outcomes','Action items assigned and communicated','Summary shared in team channel'],
-      'Personal':['Goal achieved and self-assessment documented','Progress notes updated','Next steps identified and scheduled'],
-      'Other':   ['Outcome documented and filed','Completion confirmed with relevant parties','Summary note written for reference']
-    };
-    for (const e of map) {
-      if (e.v.some(v=>t.includes(v))) { e.o.forEach(x=>{if(!out.includes(x))out.push(x);}); if(out.length>=4) break; }
-    }
+    const fb={'Work':['Deliverable completed and submitted','Status update shared with manager','Documentation filed in shared workspace'],'Project':['Project milestone completed on schedule','Status report distributed to team','Risks and blockers logged in tracker'],'Team':['Team informed and aligned on outcomes','Action items assigned and communicated','Summary shared in team channel'],'Personal':['Goal achieved and self-assessment documented','Progress notes updated','Next steps identified and scheduled'],'Other':['Outcome documented and filed','Completion confirmed with relevant parties','Summary note written for reference']};
+    for(const e of map){if(e.v.some(v=>t.includes(v))){e.o.forEach(x=>{if(!out.includes(x))out.push(x);});if(out.length>=4)break;}}
     (fb[category]||fb['Other']).forEach(f=>{if(out.length<4&&!out.includes(f))out.push(f);});
     return out.slice(0,4);
   }
@@ -1062,193 +1109,117 @@
   // ═══════════════════════════════════════════════════════════════════
   // TAB 3 — DAILY CHECKOUT
   // ═══════════════════════════════════════════════════════════════════
-  function renderCheckout() {
-    const list = document.getElementById('checkout-list');
-    const done = tasks.filter(t=>t.done).sort((a,b)=>(b.completedAt||b.created)-(a.completedAt||a.created));
-    if (!done.length) { list.innerHTML=`<div class="empty-state">No completed tasks yet. Check off tasks in the Tasks tab.</div>`; return; }
+  function renderCheckout(){
+    const list=document.getElementById('checkout-list');
+    const done=tasks.filter(t=>t.done).sort((a,b)=>(b.completedAt||b.created)-(a.completedAt||a.created));
+    if(!done.length){list.innerHTML=`<div class="empty-state">No completed tasks yet. Check off tasks in the Tasks tab.</div>`;return;}
     const groups={};
-    done.forEach(t=>{
-      const d=new Date(t.completedAt||t.created).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-      if(!groups[d]) groups[d]=[]; groups[d].push(t);
-    });
-    list.innerHTML = Object.entries(groups).map(([date,items])=>
+    done.forEach(t=>{const d=new Date(t.completedAt||t.created).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});if(!groups[d])groups[d]=[];groups[d].push(t);});
+    list.innerHTML=Object.entries(groups).map(([date,items])=>
       `<div style="max-width:760px;margin:0 auto 8px;">
         <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#3a6ea8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1a2d45;">${date}</div>
-        ${items.map(t=>`
-          <div class="checkout-card">
-            <div class="checkout-body">
-              <div class="checkout-text-display">${esc(t.name)}</div>
-              <div class="checkout-meta">
-                <span class="checkout-cat-badge">${t.category}</span>
-                <span class="badge badge-priority-${t.priority}" style="font-size:0.68rem;">${cap(t.priority)}</span>
-                ${t.notes?`<span class="checkout-date">${esc(t.notes)}</span>`:''}
-              </div>
-            </div>
-          </div>`).join('')}
+        ${items.map(t=>`<div class="checkout-card"><div class="checkout-body"><div class="checkout-text-display">${esc(t.name)}</div><div class="checkout-meta"><span class="checkout-cat-badge">${t.category}</span><span class="badge badge-priority-${t.priority}" style="font-size:0.68rem;">${cap(t.priority)}</span>${t.notes?`<span class="checkout-date">${esc(t.notes)}</span>`:''}</div></div></div>`).join('')}
       </div>`).join('');
   }
 
-  function generateCheckoutReport() {
-    const box       = document.getElementById('checkout-output-box');
-    const todayDone = tasks.filter(t=>t.done&&t.completedAt&&new Date(t.completedAt).toISOString().slice(0,10)===todayISO);
-    const remaining = tasks.filter(t=>!t.done&&!t.archived);
-    const high      = remaining.filter(t=>t.priority==='high');
-    if (!todayDone.length) { box.textContent='No tasks completed today yet.'; box.classList.add('visible'); return; }
+  function generateCheckoutReport(){
+    const box=document.getElementById('checkout-output-box');
+    const todayDone=tasks.filter(t=>t.done&&t.completedAt&&new Date(t.completedAt).toISOString().slice(0,10)===todayISO);
+    const remaining=tasks.filter(t=>!t.done&&!t.archived);
+    const high=remaining.filter(t=>t.priority==='high');
+    if(!todayDone.length){box.textContent='No tasks completed today yet.';box.classList.add('visible');return;}
     let text=`DAILY CHECKOUT REPORT\n${todayStr}\n${'─'.repeat(40)}\n\nCOMPLETED TODAY\n`;
     todayDone.forEach(t=>{text+=`  - ${t.name}  [${t.category}]  [${cap(t.priority)}]\n`;if(t.notes)text+=`    ${t.notes}\n`;});
     if(remaining.length){text+=`\nSTILL IN PROGRESS\n`;remaining.forEach(t=>{text+=`  - ${t.name}  [${cap(t.priority)}]${t.due?`  [Due: ${fmtDate(t.due)}]`:''}\n`;});}
     if(high.length){text+=`\nHIGH PRIORITY REMAINING: ${high.length}\n`;high.forEach(t=>text+=`  - ${t.name}\n`);}
     text+=`\nCompleted today: ${todayDone.length}`;
-    box.textContent=text.trim(); box.classList.add('visible');
+    box.textContent=text.trim();box.classList.add('visible');
   }
-
-  function copyCheckoutReport() {
+  function copyCheckoutReport(){
     generateCheckoutReport();
-    navigator.clipboard.writeText(document.getElementById('checkout-output-box').textContent).then(()=>{
-      const btn=document.getElementById('checkout-copy-btn');
-      btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy to Clipboard',2000);
-    });
+    navigator.clipboard.writeText(document.getElementById('checkout-output-box').textContent).then(()=>{const btn=document.getElementById('checkout-copy-btn');btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to Clipboard',2000);});
   }
 
   // ═══════════════════════════════════════════════════════════════════
   // TAB 4 — REPORTS
   // ═══════════════════════════════════════════════════════════════════
-  function generateMorningSMS() {
-    const activeGoals = goals.filter(g=>g.status!=='complete');
-    const highTasks   = tasks.filter(t=>!t.done&&!t.archived&&t.priority==='high');
-    const otherTasks  = tasks.filter(t=>!t.done&&!t.archived&&t.priority!=='high').slice(0,3);
-    const days        = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-
-    let msg = `Good morning! Here's my plan for today (${days[NOW.getDay()]}):\n\n`;
-    if (activeGoals.length) {
-      msg += `Goals I'm working on:\n`;
-      activeGoals.slice(0,5).forEach(g=>{
-        msg += `- ${g.title}`;
-        if (g.detail) msg += ` (${g.detail})`;
-        msg += '\n';
-      });
-      msg += '\n';
-    }
-    if (highTasks.length) {
-      msg += `Priority tasks:\n`;
-      highTasks.slice(0,4).forEach(t=>{ msg+=`- ${t.name}\n`; });
-      msg += '\n';
-    }
-    if (otherTasks.length) {
-      msg += `Also on my list:\n`;
-      otherTasks.forEach(t=>{ msg+=`- ${t.name}\n`; });
-      msg += '\n';
-    }
-    if (!activeGoals.length && !highTasks.length && !otherTasks.length) {
-      msg += `Nothing added yet — add some goals and tasks to generate your check-in.\n\n`;
-    }
-    msg += `Will keep you posted throughout the day!`;
-    document.getElementById('morning-preview').textContent = msg;
+  function generateMorningSMS(){
+    const activeGoals=goals.filter(g=>g.status!=='complete');
+    const highTasks=tasks.filter(t=>!t.done&&!t.archived&&t.priority==='high');
+    const otherTasks=tasks.filter(t=>!t.done&&!t.archived&&t.priority!=='high').slice(0,3);
+    const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    let msg=`Good morning! Here's my plan for today (${days[NOW.getDay()]}):\n\n`;
+    if(activeGoals.length){msg+=`Goals I'm working on:\n`;activeGoals.slice(0,5).forEach(g=>{msg+=`- ${g.title}`;if(g.detail)msg+=` (${g.detail})`;msg+='\n';});msg+='\n';}
+    if(highTasks.length){msg+=`Priority tasks:\n`;highTasks.slice(0,4).forEach(t=>{msg+=`- ${t.name}\n`;});msg+='\n';}
+    if(otherTasks.length){msg+=`Also on my list:\n`;otherTasks.forEach(t=>{msg+=`- ${t.name}\n`;});msg+='\n';}
+    if(!activeGoals.length&&!highTasks.length&&!otherTasks.length)msg+=`Nothing added yet — add some goals and tasks to generate your check-in.\n\n`;
+    msg+=`Will keep you posted throughout the day!`;
+    document.getElementById('morning-preview').textContent=msg;
   }
 
-  function generateEOD() {
-    const todayDone = tasks.filter(t=>t.done&&t.completedAt&&new Date(t.completedAt).toISOString().slice(0,10)===todayISO);
-    const remaining = tasks.filter(t=>!t.done&&!t.archived);
-    const activeG   = goals.filter(g=>g.status!=='complete');
-
-    let text = `End of day — ${todayStr}\n\n`;
-    if (todayDone.length) {
-      text += `Done today:\n`;
-      todayDone.forEach(t=>{ text+=`- ${t.name} [${t.category}]\n`; });
-      text += '\n';
-    } else {
-      text += `Nothing marked complete today yet.\n\n`;
-    }
-    if (activeG.length) {
-      text += `Goals status:\n`;
-      activeG.forEach(g=>{ text+=`- ${g.title} — ${statusLabel[g.status]}\n`; });
-      text += '\n';
-    }
-    if (remaining.length) {
-      text += `Still in progress (${remaining.length}):\n`;
-      remaining.slice(0,5).forEach(t=>{ text+=`- ${t.name} [${cap(t.priority)}]\n`; });
-      if (remaining.length>5) text+=`  ...and ${remaining.length-5} more\n`;
-      text += '\n';
-    }
-    text += `Talk soon!`;
-    document.getElementById('eod-preview').textContent = text.trim();
+  function generateEOD(){
+    const todayDone=tasks.filter(t=>t.done&&t.completedAt&&new Date(t.completedAt).toISOString().slice(0,10)===todayISO);
+    const remaining=tasks.filter(t=>!t.done&&!t.archived);
+    const activeG=goals.filter(g=>g.status!=='complete');
+    let text=`End of day — ${todayStr}\n\n`;
+    if(todayDone.length){text+=`Done today:\n`;todayDone.forEach(t=>{text+=`- ${t.name} [${t.category}]\n`;});text+='\n';}
+    else text+=`Nothing marked complete today yet.\n\n`;
+    if(activeG.length){text+=`Goals status:\n`;activeG.forEach(g=>{text+=`- ${g.title} — ${statusLabel[g.status]}\n`;});text+='\n';}
+    if(remaining.length){text+=`Still in progress (${remaining.length}):\n`;remaining.slice(0,5).forEach(t=>{text+=`- ${t.name} [${cap(t.priority)}]\n`;});if(remaining.length>5)text+=`  ...and ${remaining.length-5} more\n`;text+='\n';}
+    text+=`Talk soon!`;
+    document.getElementById('eod-preview').textContent=text.trim();
   }
 
-  function copyEl(elId, btnId) {
-    const el   = document.getElementById(elId);
-    const btn  = document.getElementById(btnId);
-    const text = el.tagName==='TEXTAREA' ? el.value : el.textContent;
-    navigator.clipboard.writeText(text).then(()=>{
-      if (btn) { btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy to Clipboard',2000); }
-    });
+  function copyEl(elId,btnId){
+    const el=document.getElementById(elId),btn=document.getElementById(btnId);
+    const text=el.tagName==='TEXTAREA'?el.value:el.textContent;
+    navigator.clipboard.writeText(text).then(()=>{if(btn){btn.textContent='Copied!';setTimeout(()=>btn.textContent='Copy to Clipboard',2000);}});
   }
 
-  // Daily Notes
-  function loadNotes() {
-    document.getElementById('daily-notes').value = dailyNotes[todayISO] || '';
-    document.getElementById('notes-saved-label').textContent = dailyNotes[todayISO] ? "Today's notes loaded" : '';
+  function loadNotes(){
+    document.getElementById('daily-notes').value=dailyNotes[todayISO]||'';
+    document.getElementById('notes-saved-label').textContent=dailyNotes[todayISO]?"Today's notes loaded":'';
   }
-  document.getElementById('daily-notes').addEventListener('input', function() {
-    dailyNotes[todayISO] = this.value; save();
-    document.getElementById('notes-saved-label').textContent = 'Auto-saved';
+  document.getElementById('daily-notes').addEventListener('input',function(){
+    dailyNotes[todayISO]=this.value;save();
+    document.getElementById('notes-saved-label').textContent='Auto-saved';
   });
 
   // ═══════════════════════════════════════════════════════════════════
   // GOOGLE SHEETS
   // ═══════════════════════════════════════════════════════════════════
-  function toggleSheets() {
-    const body  = document.getElementById('sheets-body');
-    const arrow = document.getElementById('sheets-arrow');
-    body.classList.toggle('open');
-    arrow.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+  function toggleSheets(){
+    const body=document.getElementById('sheets-body'),arrow=document.getElementById('sheets-arrow');
+    body.classList.toggle('open');arrow.style.transform=body.classList.contains('open')?'rotate(180deg)':'';
+  }
+  function exportCSV(){
+    if(!tasks.length){alert('No tasks to export.');return;}
+    const header=['Date Added','Task Name','Priority','Category','Due Date','Status','Notes'];
+    const rows=tasks.filter(t=>!t.archived).map(t=>[new Date(t.created).toLocaleDateString('en-US'),t.name,cap(t.priority),t.category,t.due||'',t.done?'Completed':'Active',t.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+    const csv=[header.join(','),...rows].join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=`Tasks_${todayISO}.csv`;a.click();URL.revokeObjectURL(url);
+  }
+  function copyScript(){
+    navigator.clipboard.writeText(document.getElementById('apps-script-code').innerText).then(()=>{const btn=document.getElementById('copy-btn');btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy Script',2000);});
+  }
+  async function syncToSheets(){
+    const url=document.getElementById('sheets-url').value.trim();
+    const status=document.getElementById('sync-status');
+    if(!url){status.style.color='#f87171';status.textContent='Please paste your Web App URL.';return;}
+    if(!tasks.length){status.style.color='#fbbf24';status.textContent='No tasks to sync.';return;}
+    status.style.color='#60a5fa';status.textContent='Syncing...';
+    localStorage.setItem('sheetsUrl',url);
+    const payload={tasks:tasks.filter(t=>!t.archived).map(t=>({dateAdded:new Date(t.created).toLocaleDateString('en-US'),name:t.name,priority:cap(t.priority),category:t.category,due:t.due||'',status:t.done?'Completed':'Active',notes:t.notes||'',lastUpdated:new Date().toLocaleDateString('en-US')}))};
+    try{await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});status.style.color='#4ade80';status.textContent=`Synced ${tasks.filter(t=>!t.archived).length} task(s) successfully.`;}
+    catch{status.style.color='#f87171';status.textContent='Sync failed. Check your URL and try again.';}
   }
 
-  function exportCSV() {
-    if (!tasks.length) { alert('No tasks to export.'); return; }
-    const header = ['Date Added','Task Name','Priority','Category','Due Date','Status','Notes'];
-    const rows   = tasks.filter(t=>!t.archived).map(t=>
-      [new Date(t.created).toLocaleDateString('en-US'),t.name,cap(t.priority),t.category,t.due||'',t.done?'Completed':'Active',t.notes||'']
-      .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
-    const csv  = [header.join(','),...rows].join('\n');
-    const blob = new Blob([csv],{type:'text/csv'});
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href=url; a.download=`Tasks_${todayISO}.csv`; a.click(); URL.revokeObjectURL(url);
-  }
-
-  function copyScript() {
-    navigator.clipboard.writeText(document.getElementById('apps-script-code').innerText).then(()=>{
-      const btn=document.getElementById('copy-btn');
-      btn.textContent='Copied'; setTimeout(()=>btn.textContent='Copy Script',2000);
-    });
-  }
-
-  async function syncToSheets() {
-    const url    = document.getElementById('sheets-url').value.trim();
-    const status = document.getElementById('sync-status');
-    if (!url)          { status.style.color='#f87171'; status.textContent='Please paste your Web App URL.'; return; }
-    if (!tasks.length) { status.style.color='#fbbf24'; status.textContent='No tasks to sync.'; return; }
-    status.style.color='#60a5fa'; status.textContent='Syncing...';
-    localStorage.setItem('sheetsUrl', url);
-    const payload={tasks:tasks.filter(t=>!t.archived).map(t=>({
-      dateAdded:new Date(t.created).toLocaleDateString('en-US'),
-      name:t.name,priority:cap(t.priority),category:t.category,
-      due:t.due||'',status:t.done?'Completed':'Active',
-      notes:t.notes||'',lastUpdated:new Date().toLocaleDateString('en-US')
-    }))};
-    try {
-      await fetch(url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      status.style.color='#4ade80'; status.textContent=`Synced ${tasks.filter(t=>!t.archived).length} task(s) successfully.`;
-    } catch {
-      status.style.color='#f87171'; status.textContent='Sync failed. Check your URL and try again.';
-    }
-  }
-
-  // ── Init ─────────────────────────────────────────────────────────────────────
-  document.getElementById('task-name').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
-  const savedUrl = localStorage.getItem('sheetsUrl');
-  if (savedUrl) document.getElementById('sheets-url').value = savedUrl;
-  renderTasks();
+  // ── Init ─────────────────────────────────────────────────────────
+  document.getElementById('task-name').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});
+  const savedUrl=localStorage.getItem('sheetsUrl');
+  if(savedUrl) document.getElementById('sheets-url').value=savedUrl;
 </script>
 </body>
 </html>
