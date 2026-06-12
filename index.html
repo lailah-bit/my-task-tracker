@@ -226,10 +226,16 @@
 
     /* ── Form ── */
     .form-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-    input[type="text"], input[type="date"], textarea {
+    input[type="text"], textarea {
       background: var(--surface); border: 1.5px solid var(--border);
       border-radius: 9px; padding: 9px 12px; font-size: 0.875rem;
       color: var(--text); font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="date"] {
+      background: #3b0764; border: 1.5px solid #6d28d9;
+      border-radius: 9px; padding: 9px 12px; font-size: 0.875rem;
+      color: #f3e8ff; font-family: inherit; outline: none; font-weight: 600;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     select {
       background: #3b0764; border: 1.5px solid #6d28d9;
@@ -249,7 +255,8 @@
     select:focus {
       border-color: #a855f7; box-shadow: 0 0 0 3px rgba(76,29,149,0.25);
     }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
+    input[type="date"]:focus { border-color: #a855f7; box-shadow: 0 0 0 3px rgba(76,29,149,0.25); }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.7); cursor: pointer; }
     select option { background: #3b0764; color: #f3e8ff; }
 
     .primary-btn {
@@ -731,12 +738,12 @@
         <option value="Learning">Learning</option>
         <option value="Other">Other</option>
       </select>
-      <input type="date" id="task-due" style="width:150px;" />
       <select id="task-recurring">
         <option value="none">No Repeat</option>
         <option value="daily">Repeat Daily</option>
         <option value="weekly">Repeat Weekly</option>
       </select>
+      <input type="date" id="task-due" style="width:150px;" />
     </div>
     <div class="form-row">
       <textarea id="task-notes" placeholder="Notes (optional)" style="width:100%;min-height:58px;resize:vertical;"></textarea>
