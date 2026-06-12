@@ -1195,7 +1195,7 @@
     done.forEach(t=>{const d=new Date(t.completedAt||t.created).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});if(!groups[d])groups[d]=[];groups[d].push(t);});
     list.innerHTML=Object.entries(groups).map(([date,items])=>
       `<div style="max-width:760px;margin:0 auto 8px;">
-        <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#3a6ea8;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1a2d45;">${date}</div>
+        <div style="font-size:0.82rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#60a5fa;margin-bottom:10px;padding:8px 14px;background:#0c1f45;border-radius:8px;border-left:3px solid #1d4ed8;">${date}</div>
         ${items.map(t=>`<div class="checkout-card"><div class="checkout-body"><div class="checkout-text-display">${esc(t.name)}</div><div class="checkout-meta"><span class="checkout-cat-badge">${t.category}</span><span class="badge badge-priority-${t.priority}" style="font-size:0.68rem;">${cap(t.priority)}</span>${t.notes?`<span class="checkout-date">${esc(t.notes)}</span>`:''}</div></div></div>`).join('')}
       </div>`).join('');
   }
