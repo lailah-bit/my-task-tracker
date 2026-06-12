@@ -282,21 +282,36 @@
 
     /* Goals Tab */
     .goal-list { max-width: 760px; margin: 0 auto; }
-    .goal-card { background: #0d1c2e; border: 1px solid #1a2d45; border-left: 4px solid #1d4ed8; border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; animation: fadeIn 0.2s ease; }
-    .goal-card[data-status="complete"]    { border-left-color: #16a34a; opacity: 0.5; }
-    .goal-card[data-status="in-progress"] { border-left-color: #1d4ed8; }
-    .goal-card[data-status="on-track"]    { border-left-color: #d97706; }
-    .goal-card[data-status="not-started"] { border-left-color: #4d6a8a; }
     .goal-top { display: flex; gap: 14px; align-items: flex-start; }
     .goal-body { flex: 1; }
     .goal-title-text { font-size: 0.93rem; font-weight: 600; color: #e8f0fc; margin-bottom: 6px; }
     .goal-card[data-status="complete"] .goal-title-text { text-decoration: line-through; color: #4d6a8a; }
     .goal-meta { display: flex; gap: 6px; flex-wrap: wrap; }
     .goal-detail-text { font-size: 0.79rem; color: #4d6a8a; margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a2d45; line-height: 1.5; }
-    .badge-status-complete    { background: #061a0e; color: #4ade80; border: 1px solid #14532d; }
-    .badge-status-in-progress { background: #071428; color: #60a5fa; border: 1px solid #1e3a5f; }
-    .badge-status-on-track    { background: #1f1500; color: #fbbf24; border: 1px solid #78350f; }
-    .badge-status-not-started { background: #0d1c2e; color: #4d6a8a; border: 1px solid #1a2d45; }
+    .badge-status-complete    { background: #052e12; color: #4ade80; border: 1px solid #166534; font-weight:700; }
+    .badge-status-in-progress { background: #0c1f45; color: #93c5fd; border: 1px solid #1d4ed8; font-weight:700; }
+    .badge-status-on-track    { background: #2a1a00; color: #fbbf24; border: 1px solid #b45309; font-weight:700; }
+    .badge-status-not-started { background: #111827; color: #6b7280; border: 1px solid #374151; font-weight:700; }
+
+    .goals-date-group { max-width:760px; margin: 0 auto 28px; }
+    .goals-date-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .goals-date-label {
+      font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.12em; color: #e8f0fc;
+      background: #1a2d45; border-radius: 6px; padding: 5px 12px; white-space: nowrap;
+    }
+    .goals-date-line { flex: 1; height: 1px; background: #1a2d45; }
+    .goal-card {
+      background: #0d1c2e; border: 1px solid #1a2d45; border-left: 4px solid #1d4ed8;
+      border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; animation: fadeIn 0.2s ease;
+    }
+    .goal-card[data-status="complete"]    { border-left-color: #16a34a; background: #061810; }
+    .goal-card[data-status="in-progress"] { border-left-color: #3b82f6; }
+    .goal-card[data-status="on-track"]    { border-left-color: #f59e0b; }
+    .goal-card[data-status="not-started"] { border-left-color: #374151; opacity: 0.7; }
 
     .goals-copy-bar { max-width: 760px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .goals-copy-bar p { font-size: 0.81rem; color: #3a6ea8; }
@@ -1036,25 +1051,41 @@
   function renderGoals(){
     const list=document.getElementById('goal-list');
     if(!goals.length){list.innerHTML=`<div class="empty-state">No goals yet.</div>`;return;}
-    list.innerHTML=goals.map(g=>`
-      <div class="goal-card" data-status="${g.status}">
-        <div class="goal-top">
-          <div class="goal-body">
-            <div class="goal-title-text">${esc(g.title)}</div>
-            <div class="goal-meta">
-              <span class="badge badge-status-${g.status}">${statusLabel[g.status]}</span>
-              <span class="badge badge-cat">${g.category}</span>
-              ${g.due?`<span class="badge badge-date">${fmtDate(g.due)}</span>`:''}
-            </div>
-            ${g.detail?`<div class="goal-detail-text">${esc(g.detail)}</div>`:''}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <select onchange="setGoalStatus(${g.id},this.value)" style="font-size:0.75rem;padding:4px 8px;width:110px;">
-              ${Object.entries(statusLabel).map(([v,l])=>`<option value="${v}" ${g.status===v?'selected':''}>${l}</option>`).join('')}
-            </select>
-            <button class="action-btn delete" onclick="deleteGoal(${g.id})">Delete</button>
-          </div>
+
+    // Group by creation date
+    const groups={};
+    [...goals].forEach(g=>{
+      const d=new Date(g.created).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+      if(!groups[d])groups[d]=[];
+      groups[d].push(g);
+    });
+
+    list.innerHTML=Object.entries(groups).map(([date,items])=>`
+      <div class="goals-date-group">
+        <div class="goals-date-header">
+          <span class="goals-date-label">${date}</span>
+          <span class="goals-date-line"></span>
+          <span style="font-size:0.7rem;color:#3a6ea8;white-space:nowrap;">${items.length} item${items.length!==1?'s':''}</span>
         </div>
+        ${items.map(g=>`
+        <div class="goal-card" data-status="${g.status}">
+          <div class="goal-top">
+            <div class="goal-body">
+              <div class="goal-title-text">${esc(g.title)}</div>
+              <div class="goal-meta">
+                <span class="badge badge-status-${g.status}">${statusLabel[g.status]}</span>
+                <span class="badge badge-cat">${g.category}</span>
+              </div>
+              ${g.detail?`<div class="goal-detail-text">${esc(g.detail)}</div>`:''}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <select onchange="setGoalStatus(${g.id},this.value)" style="font-size:0.75rem;padding:4px 8px;width:110px;">
+                ${Object.entries(statusLabel).map(([v,l])=>`<option value="${v}" ${g.status===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+              <button class="action-btn delete" onclick="deleteGoal(${g.id})">Delete</button>
+            </div>
+          </div>
+        </div>`).join('')}
       </div>`).join('');
   }
 
