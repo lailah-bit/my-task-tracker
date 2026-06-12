@@ -779,62 +779,19 @@
 
   <div class="stats" id="stats"></div>
 
-  <div class="collapsible">
-    <div class="collapsible-header" onclick="toggleSheets()">
-      <span class="collapsible-title">Google Sheets Export &amp; Sync</span>
-      <span class="collapsible-arrow" id="sheets-arrow">&#9660;</span>
-    </div>
-    <div class="collapsible-body" id="sheets-body">
-      <div class="sheets-section">
-        <div class="sheets-section-title">Option 1 — Download CSV</div>
-        <p class="sheets-desc">Download all tasks as a CSV file. Open it directly in Google Sheets.</p>
-        <button class="inline-btn btn-green" onclick="exportCSV()">Download CSV Report</button>
-      </div>
-      <div class="sheets-section">
-        <div class="sheets-section-title">Option 2 — Auto-sync to Google Sheets</div>
-        <p class="sheets-desc">One-time setup. After this, every sync pushes your task list directly to your Google Sheet.</p>
-        <ol class="setup-steps">
-          <li>Open <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> and create a new blank spreadsheet.</li>
-          <li>Click <strong>Extensions &rarr; Apps Script</strong>.</li>
-          <li>Delete all existing code, paste the script below, then click <strong>Save</strong>.</li>
-          <li>Click <strong>Deploy &rarr; New deployment &rarr; Web app</strong>. Set access to <strong>Anyone</strong>. Click <strong>Deploy</strong>.</li>
-          <li>Copy the Web App URL, paste it below, and click <strong>Sync All Tasks</strong>.</li>
-        </ol>
-        <div class="code-block" id="apps-script-code">function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(["Date Added","Task Name","Priority","Category","Due Date","Status","Notes","Last Updated"]);
-      sheet.getRange(1,1,1,8).setFontWeight("bold");
-    }
-    if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow()-1);
-    data.tasks.forEach(function(t) {
-      sheet.appendRow([t.dateAdded,t.name,t.priority,t.category,t.due||"",t.status,t.notes||"",t.lastUpdated]);
-    });
-    return ContentService.createTextOutput(JSON.stringify({success:true})).setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
-  }
-}</div>
-        <button class="inline-btn btn-slate" onclick="copyScript()" id="copy-btn">Copy Script</button>
-        <div class="action-row">
-          <input type="text" id="sheets-url" placeholder="Paste your Web App URL here" />
-          <button class="inline-btn btn-blue" onclick="syncToSheets()">Sync All Tasks</button>
-        </div>
-        <div id="sync-status" class="sync-status"></div>
-      </div>
-    </div>
-  </div>
-
   <div class="view-toggle">
     <div class="view-btns">
       <button class="view-btn" id="task-list-btn" onclick="setTaskView('list')">&#9776; List</button>
       <button class="view-btn active" id="task-board-btn" onclick="setTaskView('board')">&#9646;&#9646; Board</button>
     </div>
     <div id="board-date-filter" style="display:flex;align-items:center;gap:8px;">
-      <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);">Date</label>
-      <select id="board-date-select" onchange="renderTaskBoard()" style="padding:6px 28px 6px 10px;font-size:0.8rem;border-radius:8px;border:1.5px solid #6d28d9;background:#3b0764;color:#f3e8ff;font-family:inherit;cursor:pointer;font-weight:600;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23d8b4fe' d='M1 1l5 5 5-5'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;"></select>
+      <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);">View</label>
+      <select id="board-date-select" onchange="onBoardFilterChange()" style="padding:6px 28px 6px 10px;font-size:0.8rem;border-radius:8px;border:1.5px solid #6d28d9;background:#3b0764;color:#f3e8ff;font-family:inherit;cursor:pointer;font-weight:600;appearance:none;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23d8b4fe' d='M1 1l5 5 5-5'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;">
+        <option value="week" selected>This Week</option>
+        <option value="bydate">By Date</option>
+        <option value="all">All Tasks</option>
+      </select>
+      <input type="date" id="board-date-picker" onchange="onBoardDatePick()" style="display:none;padding:6px 10px;font-size:0.8rem;border-radius:8px;border:1.5px solid #6d28d9;background:#3b0764;color:#f3e8ff;font-family:inherit;font-weight:600;" />
     </div>
   </div>
 
@@ -970,6 +927,55 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
       <span style="font-size:0.75rem;color:#3a6ea8;" id="notes-saved-label"></span>
       <button class="ghost-btn" id="notes-copy-btn" onclick="copyEl('daily-notes','notes-copy-btn')">Copy Notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GOOGLE SHEETS (bottom) ═══ -->
+<div class="collapsible">
+  <div class="collapsible-header" onclick="toggleSheets()">
+    <span class="collapsible-title">Google Sheets Export &amp; Sync</span>
+    <span class="collapsible-arrow" id="sheets-arrow">&#9660;</span>
+  </div>
+  <div class="collapsible-body" id="sheets-body">
+    <div class="sheets-section">
+      <div class="sheets-section-title">Option 1 — Download CSV</div>
+      <p class="sheets-desc">Download all tasks as a CSV file. Open it directly in Google Sheets.</p>
+      <button class="inline-btn btn-green" onclick="exportCSV()">Download CSV Report</button>
+    </div>
+    <div class="sheets-section">
+      <div class="sheets-section-title">Option 2 — Auto-sync to Google Sheets</div>
+      <p class="sheets-desc">One-time setup. After this, every sync pushes your task list directly to your Google Sheet.</p>
+      <ol class="setup-steps">
+        <li>Open <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> and create a new blank spreadsheet.</li>
+        <li>Click <strong>Extensions &rarr; Apps Script</strong>.</li>
+        <li>Delete all existing code, paste the script below, then click <strong>Save</strong>.</li>
+        <li>Click <strong>Deploy &rarr; New deployment &rarr; Web app</strong>. Set access to <strong>Anyone</strong>. Click <strong>Deploy</strong>.</li>
+        <li>Copy the Web App URL, paste it below, and click <strong>Sync All Tasks</strong>.</li>
+      </ol>
+      <div class="code-block" id="apps-script-code">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["Date Added","Task Name","Priority","Category","Due Date","Status","Notes","Last Updated"]);
+      sheet.getRange(1,1,1,8).setFontWeight("bold");
+    }
+    if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow()-1);
+    data.tasks.forEach(function(t) {
+      sheet.appendRow([t.dateAdded,t.name,t.priority,t.category,t.due||"",t.status,t.notes||"",t.lastUpdated]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({success:true})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({error:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
+}</div>
+      <button class="inline-btn btn-slate" onclick="copyScript()" id="copy-btn">Copy Script</button>
+      <div class="action-row">
+        <input type="text" id="sheets-url" placeholder="Paste your Web App URL here" />
+        <button class="inline-btn btn-blue" onclick="syncToSheets()">Sync All Tasks</button>
+      </div>
+      <div id="sync-status" class="sync-status"></div>
     </div>
   </div>
 </div>
@@ -1682,31 +1688,50 @@
     return t.done ? 'complete' : 'todo';
   }
 
-  function populateBoardDateSelect() {
+  // Week helpers
+  function getWeekRange() {
+    const d = new Date(NOW);
+    const day = d.getDay(); // 0=Sun
+    const monday = new Date(d); monday.setDate(d.getDate() - ((day + 6) % 7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const fmt = x => x.toISOString().slice(0,10);
+    return { start: fmt(monday), end: fmt(sunday) };
+  }
+  function inCurrentWeek(iso) {
+    const { start, end } = getWeekRange();
+    return iso >= start && iso <= end;
+  }
+
+  let boardPickedDate = ''; // used when filter = 'bydate'
+
+  function onBoardFilterChange() {
     const sel = document.getElementById('board-date-select');
-    if (!sel) return;
-    const prev = sel.value || todayISO; // remember selection across re-renders
-    const dates = new Set([todayISO]);
-    tasks.filter(t => !t.archived && t.due).forEach(t => dates.add(t.due));
-    const sorted = Array.from(dates).sort();
-    sel.innerHTML = `<option value="all"${prev==='all'?' selected':''}>All dates</option>` +
-      sorted.map(d => {
-        const label = d === todayISO ? `Today (${fmtDate(d)})` : fmtDate(d);
-        return `<option value="${d}"${d === prev ? ' selected' : ''}>${label}</option>`;
-      }).join('');
-    // If prev value no longer exists in list, fall back to today
-    if (!sel.value) sel.value = todayISO;
+    const picker = document.getElementById('board-date-picker');
+    if (sel.value === 'bydate') {
+      picker.style.display = 'block';
+      if (!boardPickedDate) boardPickedDate = todayISO;
+      picker.value = boardPickedDate;
+    } else {
+      picker.style.display = 'none';
+    }
+    renderTaskBoard();
+  }
+
+  function onBoardDatePick() {
+    const picker = document.getElementById('board-date-picker');
+    boardPickedDate = picker.value || todayISO;
+    renderTaskBoard();
   }
 
   function renderTaskBoard() {
-    populateBoardDateSelect();
-    const sel = document.getElementById('board-date-select');
-    const dateFilter = sel ? sel.value : todayISO;
-    const board = document.getElementById('task-board');
+    const sel    = document.getElementById('board-date-select');
+    const filter = sel ? sel.value : 'week';
+    const board  = document.getElementById('task-board');
     const active = tasks.filter(t => {
       if (t.archived) return false;
-      if (dateFilter === 'all') return true;
-      return t.due === dateFilter;
+      if (filter === 'week')   return t.due ? inCurrentWeek(t.due) : false;
+      if (filter === 'bydate') return t.due === (boardPickedDate || todayISO);
+      return true; // 'all'
     });
     board.innerHTML = TASK_COLS.map(col => {
       const items = active.filter(t => getTaskStatus(t) === col.key);
