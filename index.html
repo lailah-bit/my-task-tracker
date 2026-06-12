@@ -578,10 +578,13 @@
 
   <div class="card">
     <div class="card-title">Task Draft</div>
-    <p style="font-size:0.81rem;color:#4d6a8a;margin-bottom:14px;line-height:1.6;">Your active tasks, auto-listed as a draft. Edit freely before copying or using as a goal.</p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <input type="date" id="draft-date" style="font-size:0.84rem;padding:7px 10px;" onchange="refreshTaskDraft()" />
+      <span style="font-size:0.78rem;color:#3a6ea8;">Showing tasks for selected date</span>
+    </div>
     <div id="task-draft" contenteditable="true" spellcheck="false" style="background:#07101f;border:1px solid #1a2d45;border-radius:8px;padding:14px 16px;font-size:0.88rem;color:#c9d6e8;line-height:2;min-height:80px;outline:none;white-space:pre-wrap;font-family:inherit;" onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#1a2d45'"></div>
     <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="ghost-btn" onclick="refreshTaskDraft()">Refresh from Tasks</button>
+      <button class="ghost-btn" onclick="refreshTaskDraft()">Refresh</button>
       <button class="ghost-btn" id="draft-copy-btn" onclick="copyTaskDraft()">Copy</button>
     </div>
   </div>
@@ -789,7 +792,7 @@
     document.getElementById('tab-' + tab).classList.add('active');
     btn.classList.add('active');
     if (tab === 'checkout') renderCheckout();
-    if (tab === 'goals')    { renderGoals(); refreshTaskDraft(); }
+    if (tab === 'goals')    { renderGoals(); document.getElementById('draft-date').value = todayISO; refreshTaskDraft(); }
     if (tab === 'reports')  { loadNotes(); generateMorningSMS(); }
   }
 
@@ -1127,10 +1130,18 @@
     document.getElementById('suggestions-box').classList.add('visible');
   }
   function refreshTaskDraft() {
-    const pending   = tasks.filter(t => !t.done && !t.archived);
-    const completed = tasks.filter(t => t.done && !t.archived);
+    const dateEl = document.getElementById('draft-date');
+    const selected = dateEl.value || todayISO;
+    if (!dateEl.value) dateEl.value = todayISO;
+
+    const pending   = tasks.filter(t => !t.archived && !t.done && new Date(t.created).toISOString().slice(0,10) === selected);
+    const completed = tasks.filter(t => !t.archived && t.done  && t.completedAt && new Date(t.completedAt).toISOString().slice(0,10) === selected);
+
     const draft = document.getElementById('task-draft');
-    if (!pending.length && !completed.length) { draft.textContent = 'No tasks yet.'; return; }
+    if (!pending.length && !completed.length) {
+      draft.textContent = 'No tasks found for this date.';
+      return;
+    }
     let text = '';
     if (pending.length) {
       text += '— Still working on —\n';
