@@ -924,7 +924,7 @@
         <div class="drag-handle" title="Drag to reorder">&#8942;</div>
         <div class="task-check ${t.done?'checked':''}" onclick="toggleDone(${t.id})">${t.done?'&#10003;':''}</div>
         <div class="task-body">
-          <div class="task-name">${esc(t.name)}</div>
+          <div class="task-name" onclick="toggleEdit(${t.id})" style="cursor:pointer;" title="Click to open">${esc(t.name)}</div>
           <div class="task-meta">
             <span class="badge badge-priority-${t.priority}">${cap(t.priority)}</span>
             <span class="badge badge-cat">${t.category}</span>
@@ -957,6 +957,7 @@
         </div>
         <div class="task-actions">
           <button class="action-btn" onclick="toggleEdit(${t.id})">Edit</button>
+          ${t.done ? `<button class="action-btn" onclick="toggleDone(${t.id})" style="border-color:#16a34a;color:#4ade80;">Pending</button>` : ''}
           <button class="action-btn arch" onclick="archiveTask(${t.id})">Archive</button>
           <button class="action-btn delete" onclick="deleteTask(${t.id})">Delete</button>
         </div>
@@ -1095,15 +1096,20 @@
     document.getElementById('suggestions-box').classList.add('visible');
   }
   function refreshTaskDraft() {
-    const active = tasks.filter(t => !t.done && !t.archived);
+    const pending   = tasks.filter(t => !t.done && !t.archived);
+    const completed = tasks.filter(t => t.done && !t.archived);
     const draft = document.getElementById('task-draft');
-    if (!active.length) { draft.textContent = 'No active tasks yet.'; return; }
-    const byP = { high: [], medium: [], low: [] };
-    active.forEach(t => { if (byP[t.priority]) byP[t.priority].push(t); });
+    if (!pending.length && !completed.length) { draft.textContent = 'No tasks yet.'; return; }
     let text = '';
-    if (byP.high.length)   { text += 'HIGH PRIORITY\n'; byP.high.forEach(t   => { text += `• ${t.name}${t.due ? ' [Due: ' + fmtDate(t.due) + ']' : ''}\n`; }); text += '\n'; }
-    if (byP.medium.length) { text += 'MEDIUM PRIORITY\n'; byP.medium.forEach(t => { text += `• ${t.name}${t.due ? ' [Due: ' + fmtDate(t.due) + ']' : ''}\n`; }); text += '\n'; }
-    if (byP.low.length)    { text += 'LOW PRIORITY\n'; byP.low.forEach(t    => { text += `• ${t.name}${t.due ? ' [Due: ' + fmtDate(t.due) + ']' : ''}\n`; }); }
+    if (pending.length) {
+      text += '— Still working on —\n';
+      pending.forEach(t => { text += `• ${t.name}\n`; });
+    }
+    if (pending.length && completed.length) text += '\n';
+    if (completed.length) {
+      text += '— Wrapped up —\n';
+      completed.forEach(t => { text += `• ${t.name}\n`; });
+    }
     draft.textContent = text.trim();
   }
   function copyTaskDraft() {
