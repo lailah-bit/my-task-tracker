@@ -730,14 +730,6 @@
         <option value="medium" selected>Medium Priority</option>
         <option value="low">Low Priority</option>
       </select>
-      <select id="task-category">
-        <option value="Work">Work</option>
-        <option value="Personal">Personal</option>
-        <option value="Health">Health</option>
-        <option value="Finance">Finance</option>
-        <option value="Learning">Learning</option>
-        <option value="Other">Other</option>
-      </select>
       <select id="task-recurring">
         <option value="none">No Repeat</option>
         <option value="daily">Repeat Daily</option>
@@ -764,15 +756,6 @@
       <option value="high">High</option>
       <option value="medium">Medium</option>
       <option value="low">Low</option>
-    </select>
-    <select id="filter-category" onchange="renderTasks()">
-      <option value="all">All Categories</option>
-      <option value="Work">Work</option>
-      <option value="Personal">Personal</option>
-      <option value="Health">Health</option>
-      <option value="Finance">Finance</option>
-      <option value="Learning">Learning</option>
-      <option value="Other">Other</option>
     </select>
     <button class="ghost-btn" onclick="clearFilters()">Clear</button>
   </div>
@@ -832,13 +815,6 @@
       <div id="suggestion-chips"></div>
     </div>
     <div class="form-row">
-      <select id="goal-category">
-        <option value="Work">Work</option>
-        <option value="Project">Project</option>
-        <option value="Personal">Personal</option>
-        <option value="Team">Team</option>
-        <option value="Other">Other</option>
-      </select>
       <select id="goal-status">
         <option value="not-started">Not Started</option>
         <option value="in-progress" selected>In Progress</option>
@@ -1207,7 +1183,6 @@
     const t=tasks.find(t=>t.id===id); if(!t) return;
     t.name     =document.getElementById('en-'+id).value.trim()||t.name;
     t.priority =document.getElementById('ep-'+id).value;
-    t.category =document.getElementById('ec-'+id).value;
     t.due      =document.getElementById('ed-'+id).value;
     t.recurring=document.getElementById('er-'+id).value;
     t.notes    =document.getElementById('eno-'+id).value.trim();
@@ -1227,21 +1202,19 @@
   function deleteSubtask(tid,idx){const t=tasks.find(t=>t.id===tid);if(t){t.subtasks.splice(idx,1);save();renderTasks();}}
 
   function clearFilters() {
-    ['filter-search','filter-status','filter-priority','filter-category'].forEach(id=>{const el=document.getElementById(id);el.tagName==='INPUT'?(el.value=''):(el.selectedIndex=0);});
+    ['filter-search','filter-status','filter-priority'].forEach(id=>{const el=document.getElementById(id);el.tagName==='INPUT'?(el.value=''):(el.selectedIndex=0);});
     renderTasks();
   }
   function filtered() {
     const q=document.getElementById('filter-search').value.toLowerCase();
     const st=document.getElementById('filter-status').value;
     const pr=document.getElementById('filter-priority').value;
-    const ca=document.getElementById('filter-category').value;
     return tasks.filter(t=>{
       if(t.archived)return false;
       if(q&&!t.name.toLowerCase().includes(q)&&!(t.notes||'').toLowerCase().includes(q))return false;
       if(st==='active'&&(t.done||getTaskStatus(t)==='cancelled'))return false;
       if(st==='done'&&!t.done)return false;
       if(pr!=='all'&&t.priority!==pr)return false;
-      if(ca!=='all'&&t.category!==ca)return false;
       return true;
     });
   }
@@ -1252,7 +1225,7 @@
     const due=tasks.filter(t=>!t.done&&!t.archived&&t.due===todayISO);
     if(!due.length){banner.classList.remove('visible');return;}
     banner.classList.add('visible');
-    items.innerHTML=due.map(t=>`<div class="due-today-item"><span class="due-today-dot"></span>${esc(t.name)}<span style="font-size:0.72rem;color:#92400e;margin-left:4px;">[${t.category}]</span></div>`).join('');
+    items.innerHTML=due.map(t=>`<div class="due-today-item"><span class="due-today-dot"></span>${esc(t.name)}</div>`).join('');
   }
 
   function renderTasks() {
@@ -1273,7 +1246,7 @@
     document.getElementById('archive-count').textContent=archived.length;
     document.getElementById('archive-list').innerHTML=archived.map(t=>
       `<div class="archive-card">
-        <div><div class="archive-card-name">${esc(t.name)}</div><div class="archive-card-meta">${t.category} · ${cap(t.priority)}</div></div>
+        <div><div class="archive-card-name">${esc(t.name)}</div><div class="archive-card-meta">${cap(t.priority)}</div></div>
         <div class="archive-actions">
           <button class="action-btn" onclick="restoreTask(${t.id})">Restore</button>
           <button class="action-btn delete" onclick="deleteTask(${t.id})">Delete</button>
@@ -1284,7 +1257,6 @@
 
     if(!shown.length){list.innerHTML=`<div class="empty-state">No tasks found.</div>`;renderSummary();return;}
 
-    const cats=['Work','Personal','Health','Finance','Learning','Other'];
     list.innerHTML=shown.map(t=>{
       const subs=t.subtasks||[];
       const subDon=subs.filter(s=>s.done).length;
@@ -1298,10 +1270,9 @@
           <div class="task-meta">
             <span class="badge badge-priority-${t.priority}">${cap(t.priority)}</span>
             <span class="badge" style="${getTaskStatus(t)==='in-progress'?'background:rgba(76,29,149,0.20);color:#c4b5fd;':getTaskStatus(t)==='complete'?'background:rgba(34,197,94,0.15);color:#86efac;':'background:var(--surface2);color:var(--text3);'}" onclick="cycleTaskStatus(${t.id})" title="Click to change status" style="cursor:pointer">${getTaskStatus(t)==='in-progress'?'In Progress':getTaskStatus(t)==='complete'?'Complete':'To Do'}</span>
-            <span class="badge badge-cat">${t.category}</span>
             ${t.due?`<span class="badge ${dueBadge(t.due)}">${fmtDate(t.due)}${isOver(t.due)&&!t.done?' — Overdue':''}</span>`:''}
             ${t.recurring!=='none'?`<span class="badge badge-recurring">${cap(t.recurring)}</span>`:''}
-            ${subs.length?`<span class="badge badge-cat">${subDon}/${subs.length} subtasks</span>`:''}
+            ${subs.length?`<span class="badge" style="background:var(--surface2);color:var(--text2);">${subDon}/${subs.length} subtasks</span>`:''}
           </div>
           ${t.notes?`<div class="task-notes-text">${esc(t.notes)}</div>`:''}
           ${subs.length?`<div class="subtask-list">${subs.map((s,i)=>`
@@ -1314,7 +1285,6 @@
             <input type="text" id="en-${t.id}" value="${esc(t.name)}" placeholder="Task name" />
             <div class="form-row">
               <select id="ep-${t.id}"><option value="high" ${t.priority==='high'?'selected':''}>High</option><option value="medium" ${t.priority==='medium'?'selected':''}>Medium</option><option value="low" ${t.priority==='low'?'selected':''}>Low</option></select>
-              <select id="ec-${t.id}">${cats.map(c=>`<option value="${c}" ${t.category===c?'selected':''}>${c}</option>`).join('')}</select>
               <input type="date" id="ed-${t.id}" value="${t.due||''}" style="width:140px;" />
               <select id="er-${t.id}"><option value="none" ${(t.recurring||'none')==='none'?'selected':''}>No Repeat</option><option value="daily" ${t.recurring==='daily'?'selected':''}>Daily</option><option value="weekly" ${t.recurring==='weekly'?'selected':''}>Weekly</option></select>
             </div>
@@ -1373,13 +1343,13 @@
     if(active.length){
       html+=`<div class="summary-section"><div class="summary-section-title">Active Tasks</div>`;
       ['high','medium','low'].forEach(p=>byP[p].forEach(t=>{
-        html+=`<div class="summary-row"><span class="summary-dot dot-${p}"></span><span class="summary-task-name">${esc(t.name)}</span><span class="summary-meta">${t.category}</span>${t.due?`<span class="summary-meta">${fmtDate(t.due)}${isOver(t.due)?' · Overdue':''}</span>`:''}<span class="summary-tag tag-${p}">${cap(p)}</span></div>`;
+        html+=`<div class="summary-row"><span class="summary-dot dot-${p}"></span><span class="summary-task-name">${esc(t.name)}</span>${t.due?`<span class="summary-meta">${fmtDate(t.due)}${isOver(t.due)?' · Overdue':''}</span>`:''}<span class="summary-tag tag-${p}">${cap(p)}</span></div>`;
       }));
       html+=`</div>`;
     }
     if(completed.length){
       html+=`<div class="summary-section"><div class="summary-section-title">Completed</div>`;
-      completed.forEach(t=>{html+=`<div class="summary-row"><span class="summary-dot dot-done"></span><span class="summary-task-name done-text">${esc(t.name)}</span><span class="summary-meta">${t.category}</span><span class="summary-tag tag-done">Done</span></div>`;});
+      completed.forEach(t=>{html+=`<div class="summary-row"><span class="summary-dot dot-done"></span><span class="summary-task-name done-text">${esc(t.name)}</span><span class="summary-tag tag-done">Done</span></div>`;});
       html+=`</div>`;
     }
     body.innerHTML=html;
@@ -1430,7 +1400,6 @@
               <div class="goal-title-text">${esc(g.title)}</div>
               <div class="goal-meta">
                 <span class="badge badge-status-${g.status}">${statusLabel[g.status]}</span>
-                <span class="badge badge-cat">${g.category}</span>
               </div>
               ${g.detail?`<div class="goal-detail-text">${esc(g.detail)}</div>`:''}
             </div>
@@ -1454,7 +1423,7 @@
     ['in-progress','on-track','not-started','complete'].forEach(s=>{
       if(!g[s].length)return;
       text+=`${statusLabel[s].toUpperCase()}\n`;
-      g[s].forEach(x=>{text+=`  - ${x.title}${x.due?`  [Due: ${fmtDate(x.due)}]`:''}  [${x.category}]\n`;if(x.detail)text+=`    ${x.detail}\n`;});
+      g[s].forEach(x=>{text+=`  - ${x.title}${x.due?`  [Due: ${fmtDate(x.due)}]`:''}\n`;if(x.detail)text+=`    ${x.detail}\n`;});
       text+='\n';
     });
     box.textContent=text.trim();box.classList.add('visible');
@@ -1549,7 +1518,7 @@
     list.innerHTML=Object.entries(groups).map(([date,items])=>
       `<div style="max-width:760px;margin:0 auto 8px;">
         <div style="font-size:0.82rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#60a5fa;margin-bottom:10px;padding:8px 14px;background:#0c1f45;border-radius:8px;border-left:3px solid #1d4ed8;">${date}</div>
-        ${items.map(t=>`<div class="checkout-card"><div class="checkout-body"><div class="checkout-text-display">${esc(t.name)}</div><div class="checkout-meta"><span class="checkout-cat-badge">${t.category}</span><span class="badge badge-priority-${t.priority}" style="font-size:0.68rem;">${cap(t.priority)}</span>${t.notes?`<span class="checkout-date">${esc(t.notes)}</span>`:''}</div></div></div>`).join('')}
+        ${items.map(t=>`<div class="checkout-card"><div class="checkout-body"><div class="checkout-text-display">${esc(t.name)}</div><div class="checkout-meta"><span class="badge badge-priority-${t.priority}" style="font-size:0.68rem;">${cap(t.priority)}</span>${t.notes?`<span class="checkout-date">${esc(t.notes)}</span>`:''}</div></div></div>`).join('')}
       </div>`).join('');
   }
 
@@ -1560,7 +1529,7 @@
     const high=remaining.filter(t=>t.priority==='high');
     if(!todayDone.length){box.textContent='No tasks completed today yet.';box.classList.add('visible');return;}
     let text=`DAILY CHECKOUT REPORT\n${todayStr}\n${'─'.repeat(40)}\n\nCOMPLETED TODAY\n`;
-    todayDone.forEach(t=>{text+=`  - ${t.name}  [${t.category}]  [${cap(t.priority)}]\n`;if(t.notes)text+=`    ${t.notes}\n`;});
+    todayDone.forEach(t=>{text+=`  - ${t.name}  [${cap(t.priority)}]\n`;if(t.notes)text+=`    ${t.notes}\n`;});
     if(remaining.length){text+=`\nSTILL IN PROGRESS\n`;remaining.forEach(t=>{text+=`  - ${t.name}  [${cap(t.priority)}]${t.due?`  [Due: ${fmtDate(t.due)}]`:''}\n`;});}
     if(high.length){text+=`\nHIGH PRIORITY REMAINING: ${high.length}\n`;high.forEach(t=>text+=`  - ${t.name}\n`);}
     text+=`\nCompleted today: ${todayDone.length}`;
@@ -1593,7 +1562,7 @@
     const remaining=tasks.filter(t=>!t.done&&!t.archived);
     const activeG=goals.filter(g=>g.status!=='complete');
     let text=`End of day — ${todayStr}\n\n`;
-    if(todayDone.length){text+=`Done today:\n`;todayDone.forEach(t=>{text+=`- ${t.name} [${t.category}]\n`;});text+='\n';}
+    if(todayDone.length){text+=`Done today:\n`;todayDone.forEach(t=>{text+=`- ${t.name}\n`;});text+='\n';}
     else text+=`Nothing marked complete today yet.\n\n`;
     if(activeG.length){text+=`Goals status:\n`;activeG.forEach(g=>{text+=`- ${g.title} — ${statusLabel[g.status]}\n`;});text+='\n';}
     if(remaining.length){text+=`Still in progress (${remaining.length}):\n`;remaining.slice(0,5).forEach(t=>{text+=`- ${t.name} [${cap(t.priority)}]\n`;});if(remaining.length>5)text+=`  ...and ${remaining.length-5} more\n`;text+='\n';}
@@ -1766,7 +1735,6 @@
           <div class="board-card-name ${t.done?'done-name':''}">${esc(t.name)}</div>
         </div>
         <div class="board-card-meta">
-          <span class="badge badge-cat">${t.category}</span>
           ${t.due?`<span class="badge ${dueBadge(t.due)}">${fmtDate(t.due)}</span>`:''}
           ${t.recurring&&t.recurring!=='none'?`<span class="badge badge-recurring">↻</span>`:''}
         </div>
@@ -1860,7 +1828,6 @@
            ondragend="onBoardDragEnd(event)">
         <div class="board-card-name ${g.status==='complete'?'done-name':''}">${esc(g.title)}</div>
         <div class="board-card-meta">
-          <span class="badge badge-cat">${g.category}</span>
           ${g.due?`<span class="badge badge-date">${fmtDate(g.due)}</span>`:''}
         </div>
         ${g.detail?`<div style="font-size:0.75rem;color:var(--text3);margin-top:6px;line-height:1.5;">${esc(g.detail)}</div>`:''}
