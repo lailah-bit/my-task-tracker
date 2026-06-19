@@ -1142,7 +1142,7 @@
     tasks.unshift({
       id: nextTaskId++, name,
       priority:  document.getElementById('task-priority').value,
-      category:  document.getElementById('task-category').value,
+      category:  'General',
       due:       document.getElementById('task-due').value,
       recurring: document.getElementById('task-recurring').value,
       notes:     document.getElementById('task-notes').value.trim(),
@@ -1366,7 +1366,7 @@
   function addGoal(){
     const title=document.getElementById('goal-title').value.trim();
     if(!title){alert('Please enter a goal title.');return;}
-    goals.unshift({id:nextGoalId++,title,category:document.getElementById('goal-category').value,status:document.getElementById('goal-status').value,due:document.getElementById('goal-due').value,detail:document.getElementById('goal-detail').value.trim(),created:Date.now()});
+    goals.unshift({id:nextGoalId++,title,category:'General',status:document.getElementById('goal-status').value,due:document.getElementById('goal-due').value,detail:document.getElementById('goal-detail').value.trim(),created:Date.now()});
     save();['goal-title','goal-due','goal-detail'].forEach(id=>document.getElementById(id).value='');clearSuggestions();renderGoals();
   }
   function deleteGoal(id){if(!confirm('Delete this goal?'))return;goals=goals.filter(g=>g.id!==id);save();renderGoals();}
@@ -1444,7 +1444,7 @@
   }
   function suggestOutputs(){
     const title=document.getElementById('goal-title').value.trim();
-    const category=document.getElementById('goal-category').value;
+    const category='General';
     if(!title){alert('Please enter a goal title first.');return;}
     currentSuggestions=buildSuggestions(title,category);
     document.getElementById('suggestion-chips').innerHTML=currentSuggestions.map((s,i)=>
