@@ -1343,7 +1343,7 @@
     if(active.length){
       html+=`<div class="summary-section"><div class="summary-section-title">Active Tasks</div>`;
       ['high','medium','low'].forEach(p=>byP[p].forEach(t=>{
-        html+=`<div class="summary-row"><span class="summary-dot dot-${p}"></span><span class="summary-task-name">${esc(t.name)}</span>${t.due?`<span class="summary-meta">${fmtDate(t.due)}${isOver(t.due)?' · Overdue':''}</span>`:''}<span class="summary-tag tag-${p}">${cap(p)}</span></div>`;
+        html+=`<div class="summary-row"><span class="summary-dot dot-${p}"></span><span class="summary-task-name">${esc(t.name)}</span></div>`;
       }));
       html+=`</div>`;
     }
@@ -1529,8 +1529,8 @@
     const high=remaining.filter(t=>t.priority==='high');
     if(!todayDone.length){box.textContent='No tasks completed today yet.';box.classList.add('visible');return;}
     let text=`DAILY CHECKOUT REPORT\n${todayStr}\n${'─'.repeat(40)}\n\nCOMPLETED TODAY\n`;
-    todayDone.forEach(t=>{text+=`  - ${t.name}  [${cap(t.priority)}]\n`;if(t.notes)text+=`    ${t.notes}\n`;});
-    if(remaining.length){text+=`\nSTILL IN PROGRESS\n`;remaining.forEach(t=>{text+=`  - ${t.name}  [${cap(t.priority)}]${t.due?`  [Due: ${fmtDate(t.due)}]`:''}\n`;});}
+    todayDone.forEach(t=>{text+=`  - ${t.name}\n`;if(t.notes)text+=`    ${t.notes}\n`;});
+    if(remaining.length){text+=`\nSTILL IN PROGRESS\n`;remaining.forEach(t=>{text+=`  - ${t.name}\n`;});}
     if(high.length){text+=`\nHIGH PRIORITY REMAINING: ${high.length}\n`;high.forEach(t=>text+=`  - ${t.name}\n`);}
     text+=`\nCompleted today: ${todayDone.length}`;
     box.textContent=text.trim();box.classList.add('visible');
@@ -1565,7 +1565,7 @@
     if(todayDone.length){text+=`Done today:\n`;todayDone.forEach(t=>{text+=`- ${t.name}\n`;});text+='\n';}
     else text+=`Nothing marked complete today yet.\n\n`;
     if(activeG.length){text+=`Goals status:\n`;activeG.forEach(g=>{text+=`- ${g.title} — ${statusLabel[g.status]}\n`;});text+='\n';}
-    if(remaining.length){text+=`Still in progress (${remaining.length}):\n`;remaining.slice(0,5).forEach(t=>{text+=`- ${t.name} [${cap(t.priority)}]\n`;});if(remaining.length>5)text+=`  ...and ${remaining.length-5} more\n`;text+='\n';}
+    if(remaining.length){text+=`Still in progress (${remaining.length}):\n`;remaining.slice(0,5).forEach(t=>{text+=`- ${t.name}\n`;});if(remaining.length>5)text+=`  ...and ${remaining.length-5} more\n`;text+='\n';}
     text+=`Talk soon!`;
     document.getElementById('eod-preview').textContent=text.trim();
   }
