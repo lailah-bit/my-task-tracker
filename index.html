@@ -834,26 +834,16 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Task Draft</div>
+    <div class="card-title">Morning Update</div>
+    <p style="font-size:0.8rem;color:var(--text3);margin-bottom:14px;line-height:1.6;">Auto-generated from your goals and today's tasks. Edit before sending.</p>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <input type="date" id="draft-date" style="font-size:0.84rem;padding:7px 10px;" onchange="refreshTaskDraft()" />
-      <span style="font-size:0.78rem;color:#3a6ea8;">Showing tasks for selected date</span>
+      <input type="date" id="draft-date" onchange="refreshTaskDraft()" />
+      <button class="ghost-btn" onclick="refreshTaskDraft()" style="padding:6px 14px;font-size:0.78rem;">↻ Refresh</button>
+      <button class="primary-btn" id="draft-copy-btn" onclick="copyTaskDraft()" style="padding:6px 18px;font-size:0.78rem;">Copy to Clipboard</button>
     </div>
-    <div id="task-draft" contenteditable="true" spellcheck="false" style="background:#07101f;border:1px solid #1a2d45;border-radius:8px;padding:14px 16px;font-size:0.88rem;color:#c9d6e8;line-height:2;min-height:80px;outline:none;white-space:pre-wrap;font-family:inherit;" onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#1a2d45'"></div>
-    <div style="display:flex;gap:8px;margin-top:10px;">
-      <button class="ghost-btn" onclick="refreshTaskDraft()">Refresh</button>
-      <button class="ghost-btn" id="draft-copy-btn" onclick="copyTaskDraft()">Copy</button>
-    </div>
+    <div id="task-draft" contenteditable="true" spellcheck="false" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;font-size:0.88rem;color:var(--text);line-height:1.9;min-height:120px;outline:none;white-space:pre-wrap;font-family:inherit;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></div>
   </div>
-
-  <div class="goals-copy-bar">
-    <p>Generate a formatted report to share with your manager.</p>
-    <div style="display:flex;gap:8px;">
-      <button class="ghost-btn" onclick="generateGoalsReport()">Generate Report</button>
-      <button class="ghost-btn" id="goals-copy-btn" onclick="copyGoalsReport()">Copy to Clipboard</button>
-    </div>
-  </div>
-  <div class="copy-output-box" id="goals-output-box"></div>
+  <div class="copy-output-box" id="goals-output-box" style="display:none;"></div>
   <div class="view-toggle">
     <div class="view-btns">
       <button class="view-btn active" id="goal-list-btn" onclick="setGoalView('list')">&#9776; List</button>
@@ -1384,10 +1374,10 @@
     const title=document.getElementById('goal-title').value.trim();
     if(!title){alert('Please enter a goal title.');return;}
     goals.unshift({id:nextGoalId++,title,category:'General',status:document.getElementById('goal-status').value,due:document.getElementById('goal-due').value,detail:document.getElementById('goal-detail').value.trim(),created:Date.now()});
-    save();['goal-title','goal-due','goal-detail'].forEach(id=>document.getElementById(id).value='');clearSuggestions();renderGoals();
+    save();['goal-title','goal-due','goal-detail'].forEach(id=>document.getElementById(id).value='');clearSuggestions();renderGoals();refreshTaskDraft();
   }
-  function deleteGoal(id){if(!confirm('Delete this goal?'))return;goals=goals.filter(g=>g.id!==id);save();renderGoals();}
-  function setGoalStatus(id,status){const g=goals.find(g=>g.id===id);if(g){g.status=status;save();renderGoals();}}
+  function deleteGoal(id){if(!confirm('Delete this goal?'))return;goals=goals.filter(g=>g.id!==id);save();renderGoals();refreshTaskDraft();}
+  function setGoalStatus(id,status){const g=goals.find(g=>g.id===id);if(g){g.status=status;save();renderGoals();refreshTaskDraft();}}
 
   const statusLabel={'not-started':'Not Started','in-progress':'In Progress','on-track':'On Track','complete':'Complete'};
 
@@ -1468,36 +1458,113 @@
       `<div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${i})"><span style="flex:1">${esc(s)}</span><button class="chip-use-btn" onclick="event.stopPropagation();useSuggestion(${i})">Use</button></div>`).join('');
     document.getElementById('suggestions-box').classList.add('visible');
   }
+  // Smart output generator — reads goal title keywords and returns a sensible output
+  function generateOutput(title) {
+    if (!title) return 'Task completed and outcome documented';
+    const t = title.toLowerCase();
+    if (/\b(meet|meeting|sync|call|check.?in|catch.?up|stand.?up|huddle)\b/.test(t))
+      return 'Clear next steps and action items captured';
+    if (/\b(email|send|message|reach out|follow.?up|reply|respond|ping)\b/.test(t))
+      return 'Message sent and response tracked';
+    if (/\b(review|audit|check|assess|evaluate|look into|look at|go through)\b/.test(t))
+      return 'Summary of findings with recommendations ready';
+    if (/\b(build|create|develop|make|set up|setup|implement|launch|deploy|publish)\b/.test(t))
+      return 'Working version ready for review';
+    if (/\b(plan|outline|draft|prepare|write|document|write up)\b/.test(t))
+      return 'Draft ready to share for feedback';
+    if (/\b(fix|resolve|debug|troubleshoot|solve|address|patch)\b/.test(t))
+      return 'Issue resolved and tested';
+    if (/\b(research|investigate|explore|analyze|analyse|study|look up)\b/.test(t))
+      return 'Research summary with key findings documented';
+    if (/\b(update|improve|refine|optimize|enhance|upgrade|rework|revamp)\b/.test(t))
+      return 'Updated version with improvements applied';
+    if (/\b(cancel|remove|delete|clean|archive|clear|close)\b/.test(t))
+      return 'Completed and confirmed';
+    if (/\b(schedule|book|arrange|coordinate|organize|set up a)\b/.test(t))
+      return 'Scheduled and confirmed with all parties';
+    if (/\b(present|share|pitch|demo|showcase|walk.?through)\b/.test(t))
+      return 'Presentation delivered and feedback collected';
+    if (/\b(test|qa|quality|verify|validate)\b/.test(t))
+      return 'Testing complete with results documented';
+    if (/\b(onboard|train|teach|show|help|support|assist)\b/.test(t))
+      return 'Completed and person is unblocked';
+    if (/\b(invoice|payment|billing|refund|charge|pay|process)\b/.test(t))
+      return 'Processed and confirmed';
+    if (/\b(hire|interview|recruit|candidate|applicant)\b/.test(t))
+      return 'Update shared with hiring team';
+    return 'Completed with outcome documented';
+  }
+
   function refreshTaskDraft() {
     const dateEl = document.getElementById('draft-date');
-    const selected = dateEl.value || todayISO;
     if (!dateEl.value) dateEl.value = todayISO;
+    const selected = dateEl.value;
 
-    const pending   = tasks.filter(t => !t.archived && !t.done && new Date(t.created).toISOString().slice(0,10) === selected);
-    const completed = tasks.filter(t => !t.archived && t.done  && t.completedAt && new Date(t.completedAt).toISOString().slice(0,10) === selected);
+    const dayName = new Date(selected + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+
+    // Goals: active ones (not complete)
+    const ongoingGoals = goals.filter(g => g.status === 'in-progress' || g.status === 'on-track');
+    const notStarted   = goals.filter(g => g.status === 'not-started');
+    const activeGoals  = [...ongoingGoals, ...notStarted];
+
+    // Tasks for selected date; fall back to all pending if none found
+    const todayTasks   = tasks.filter(t => !t.archived && !t.done && (t.due === selected || new Date(t.created).toISOString().slice(0,10) === selected));
+    const pendingTasks = todayTasks.length ? todayTasks : tasks.filter(t => !t.archived && !t.done);
+    const highTasks    = pendingTasks.filter(t => t.priority === 'high');
+    const otherTasks   = pendingTasks.filter(t => t.priority !== 'high');
 
     const draft = document.getElementById('task-draft');
-    if (!pending.length && !completed.length) {
-      draft.textContent = 'No tasks found for this date.';
+
+    if (!activeGoals.length && !pendingTasks.length) {
+      draft.textContent = 'No goals or tasks found. Add some to generate your morning update!';
       return;
     }
-    let text = '';
-    if (pending.length) {
-      text += '— Still working on —\n';
-      pending.forEach(t => { text += `• ${t.name}\n`; });
+
+    const greetings = ['Morning!', 'Hey, good morning!', 'Happy ' + dayName + '!', "Morning — here's where things stand!"];
+    const greeting  = greetings[new Date().getDay() % greetings.length];
+
+    let text = greeting + '\n\n';
+
+    // Goals section — use detail if filled in, otherwise auto-generate output
+    if (ongoingGoals.length) {
+      text += "Here's what I'm currently working on:\n";
+      ongoingGoals.forEach(g => {
+        const output = g.detail || generateOutput(g.title);
+        text += `• ${g.title}\n  → ${output}\n`;
+      });
+      text += '\n';
     }
-    if (pending.length && completed.length) text += '\n';
-    if (completed.length) {
-      text += '— Wrapped up —\n';
-      completed.forEach(t => { text += `• ${t.name}\n`; });
+    if (notStarted.length) {
+      text += "I'm also planning to kick off:\n";
+      notStarted.forEach(g => {
+        const output = g.detail || generateOutput(g.title);
+        text += `• ${g.title}\n  → ${output}\n`;
+      });
+      text += '\n';
     }
+
+    // Tasks section
+    if (highTasks.length) {
+      text += "Top priorities for today:\n";
+      highTasks.forEach(t => { text += `• ${t.name}\n`; });
+      text += '\n';
+    }
+    if (otherTasks.length) {
+      text += "Also on my plate:\n";
+      otherTasks.slice(0, 6).forEach(t => { text += `• ${t.name}\n`; });
+      if (otherTasks.length > 6) text += `• ...and ${otherTasks.length - 6} more\n`;
+      text += '\n';
+    }
+
+    text += "I'll keep you posted as things move along!";
     draft.textContent = text.trim();
   }
+
   function copyTaskDraft() {
     const text = document.getElementById('task-draft').textContent;
     navigator.clipboard.writeText(text).then(() => {
       const btn = document.getElementById('draft-copy-btn');
-      btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 2000);
+      btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy to Clipboard', 2000);
     });
   }
 
@@ -1872,7 +1939,7 @@
     e.preventDefault(); e.currentTarget.classList.remove('drag-over');
     if (boardGoalDragId === null) return;
     const g = goals.find(g => g.id === boardGoalDragId);
-    if (g) { g.status = status; save(); renderGoalBoard(); renderGoals(); }
+    if (g) { g.status = status; save(); renderGoalBoard(); renderGoals(); refreshTaskDraft(); }
     boardGoalDragId = null;
   }
 
