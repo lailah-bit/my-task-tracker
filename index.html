@@ -1458,6 +1458,33 @@
       `<div class="suggestion-chip" id="chip-${i}" onclick="useSuggestion(${i})"><span style="flex:1">${esc(s)}</span><button class="chip-use-btn" onclick="event.stopPropagation();useSuggestion(${i})">Use</button></div>`).join('');
     document.getElementById('suggestions-box').classList.add('visible');
   }
+  // Time estimator — returns minutes based on title keywords
+  function estimateTime(title) {
+    if (!title) return 30;
+    const t = title.toLowerCase();
+    if (/\b(build|develop|implement|create|launch|deploy|publish|set up)\b/.test(t)) return 120;
+    if (/\b(refactor|rework|revamp|redesign|rewrite|overhaul)\b/.test(t))            return 150;
+    if (/\b(research|investigate|analyze|analyse|explore|study)\b/.test(t))          return 90;
+    if (/\b(plan|outline|draft|document|write up|prepare)\b/.test(t))                return 60;
+    if (/\b(review|audit|assess|evaluate|go through|look into)\b/.test(t))           return 45;
+    if (/\b(update|improve|refine|optimize|enhance|upgrade|fix|resolve|debug)\b/.test(t)) return 60;
+    if (/\b(test|qa|verify|validate)\b/.test(t))                                     return 60;
+    if (/\b(present|demo|pitch|showcase|walk.?through)\b/.test(t))                   return 60;
+    if (/\b(meet|meeting|sync|call|check.?in|catch.?up|stand.?up|huddle)\b/.test(t)) return 45;
+    if (/\b(onboard|train|teach|support|assist|help)\b/.test(t))                     return 45;
+    if (/\b(schedule|book|arrange|coordinate|organize)\b/.test(t))                   return 15;
+    if (/\b(email|send|message|reach out|follow.?up|reply|respond|ping)\b/.test(t))  return 20;
+    if (/\b(cancel|remove|delete|clean|archive|clear|close|process|confirm)\b/.test(t)) return 15;
+    return 30; // default
+  }
+
+  function fmtMins(mins) {
+    if (mins < 60) return `~${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? `~${h}h ${m}min` : `~${h}h`;
+  }
+
   // Smart output generator — reads goal title keywords and returns a sensible output
   function generateOutput(title) {
     if (!title) return 'Task completed and outcome documented';
@@ -1525,12 +1552,15 @@
 
     let text = greeting + '\n\n';
 
-    // Goals section — use detail if filled in, otherwise auto-generate output
+    // Goals section — use detail if filled in, otherwise auto-generate output + time estimate
+    let totalGoalMins = 0;
     if (ongoingGoals.length) {
       text += "Here's what I'm currently working on:\n";
       ongoingGoals.forEach(g => {
         const output = g.detail || generateOutput(g.title);
-        text += `• ${g.title}\n  → ${output}\n`;
+        const mins   = estimateTime(g.title);
+        totalGoalMins += mins;
+        text += `• ${g.title} (${fmtMins(mins)})\n  → ${output}\n`;
       });
       text += '\n';
     }
@@ -1538,9 +1568,20 @@
       text += "I'm also planning to kick off:\n";
       notStarted.forEach(g => {
         const output = g.detail || generateOutput(g.title);
-        text += `• ${g.title}\n  → ${output}\n`;
+        const mins   = estimateTime(g.title);
+        totalGoalMins += mins;
+        text += `• ${g.title} (${fmtMins(mins)})\n  → ${output}\n`;
       });
       text += '\n';
+    }
+
+    // Time summary
+    if (activeGoals.length) {
+      const taskMins = pendingTasks.length * 20; // rough 20 min avg per task
+      const grandTotal = totalGoalMins + taskMins;
+      text += `⏱ Estimated time for goals: ${fmtMins(totalGoalMins)}`;
+      if (pendingTasks.length) text += ` + ${fmtMins(taskMins)} for ${pendingTasks.length} task${pendingTasks.length !== 1 ? 's' : ''} = ${fmtMins(grandTotal)} total`;
+      text += '\n\n';
     }
 
     // Tasks section
