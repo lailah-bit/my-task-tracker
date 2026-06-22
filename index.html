@@ -307,7 +307,11 @@
       border-radius: 20px; padding: 5px 14px;
       font-size: 0.74rem; font-weight: 700; color: var(--text2);
       box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      cursor: pointer; transition: all 0.15s;
     }
+    .stat-chip:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 2px 8px rgba(76,29,149,0.18); }
+    .stat-chip.active { background: linear-gradient(135deg,#4c1d95,#7c3aed,#9d5cf7); color:#fff; border-color: transparent; box-shadow: 0 2px 10px rgba(76,29,149,0.35); }
+    .stat-chip.active span { color: #fff; }
     .stat-chip span { color: var(--purple); font-weight: 700; }
 
     /* ── Task Card ── */
@@ -1204,6 +1208,14 @@
   }
   function deleteSubtask(tid,idx){const t=tasks.find(t=>t.id===tid);if(t){t.subtasks.splice(idx,1);save();renderTasks();}}
 
+  function filterByChip(status, priority) {
+    document.getElementById('filter-status').value = status;
+    document.getElementById('filter-priority').value = priority;
+    document.getElementById('filter-search').value = '';
+    setTaskView('list');
+    renderTasks();
+  }
+
   function clearFilters() {
     ['filter-search','filter-status','filter-priority'].forEach(id=>{const el=document.getElementById(id);el.tagName==='INPUT'?(el.value=''):(el.selectedIndex=0);});
     renderTasks();
@@ -1239,11 +1251,13 @@
     const done=tasks.filter(t=>t.done&&!t.archived);
     const archived=tasks.filter(t=>t.archived);
 
+    const curFilter=document.getElementById('filter-status').value;
+    const curPri=document.getElementById('filter-priority').value;
     document.getElementById('stats').innerHTML=
-      `<div class="stat-chip">Total <span>${tasks.filter(t=>!t.archived).length}</span></div>
-       <div class="stat-chip">Done <span>${done.length}</span></div>
-       <div class="stat-chip">Remaining <span>${active.length}</span></div>
-       ${active.filter(t=>t.priority==='high').length?`<div class="stat-chip">High Priority <span>${active.filter(t=>t.priority==='high').length}</span></div>`:''}`;
+      `<div class="stat-chip${curFilter==='all'&&curPri==='all'?' active':''}" onclick="filterByChip('all','all')">Total <span>${tasks.filter(t=>!t.archived).length}</span></div>
+       <div class="stat-chip${curFilter==='done'?' active':''}" onclick="filterByChip('done','all')">Done <span>${done.length}</span></div>
+       <div class="stat-chip${curFilter==='active'&&curPri==='all'?' active':''}" onclick="filterByChip('active','all')">Remaining <span>${active.length}</span></div>
+       ${active.filter(t=>t.priority==='high').length?`<div class="stat-chip${curFilter==='active'&&curPri==='high'?' active':''}" onclick="filterByChip('active','high')">High Priority <span>${active.filter(t=>t.priority==='high').length}</span></div>`:''}`;
 
     document.getElementById('archive-section').style.display=archived.length?'block':'none';
     document.getElementById('archive-count').textContent=archived.length;
