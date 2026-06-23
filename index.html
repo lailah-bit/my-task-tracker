@@ -1150,6 +1150,7 @@
     ['task-name','task-due','task-notes'].forEach(id => document.getElementById(id).value='');
     document.getElementById('task-recurring').value='none';
     renderTasks();
+    refreshTaskDraft();
   }
 
   function toggleDone(id) {
@@ -1166,7 +1167,7 @@
       tasks.unshift(copy);
     }
     if (t.done) recordToday();
-    save(); renderTasks();
+    save(); renderTasks(); refreshTaskDraft();
     if (taskView === 'board') renderTaskBoard();
     if (document.getElementById('tab-checkout').classList.contains('active')) renderCheckout();
   }
@@ -1183,7 +1184,7 @@
     t.due      =document.getElementById('ed-'+id).value;
     t.recurring=document.getElementById('er-'+id).value;
     t.notes    =document.getElementById('eno-'+id).value.trim();
-    save(); renderTasks();
+    save(); renderTasks(); refreshTaskDraft();
   }
 
   function toggleSubtask(tid,idx) {
@@ -1885,7 +1886,7 @@
     t.done = (t.status === 'complete');
     t.completedAt = t.done ? Date.now() : null;
     if (t.done) recordToday();
-    save(); renderTasks();
+    save(); renderTasks(); refreshTaskDraft();
     if (taskView === 'board') renderTaskBoard();
   }
 
