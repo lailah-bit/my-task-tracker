@@ -1537,8 +1537,6 @@
     // Tasks for selected date; fall back to all pending if none found
     const todayTasks   = tasks.filter(t => !t.archived && !t.done && (t.due === selected || new Date(t.created).toISOString().slice(0,10) === selected));
     const pendingTasks = todayTasks.length ? todayTasks : tasks.filter(t => !t.archived && !t.done);
-    const highTasks    = pendingTasks.filter(t => t.priority === 'high');
-    const otherTasks   = pendingTasks.filter(t => t.priority !== 'high');
 
     const draft = document.getElementById('task-draft');
 
@@ -1552,49 +1550,46 @@
 
     let text = greeting + '\n\n';
 
-    // Goals section — use detail if filled in, otherwise auto-generate output + time estimate
-    let totalGoalMins = 0;
-    if (ongoingGoals.length) {
+    // "Currently working on" = ongoing goals + today's tasks
+    let totalMins = 0;
+
+    const hasCurrentWork = ongoingGoals.length || pendingTasks.length;
+    if (hasCurrentWork) {
       text += "Here's what I'm currently working on:\n";
+
+      // Ongoing goals first
       ongoingGoals.forEach(g => {
         const output = g.detail || generateOutput(g.title);
         const mins   = estimateTime(g.title);
-        totalGoalMins += mins;
+        totalMins += mins;
         text += `• ${g.title} (${fmtMins(mins)})\n  → ${output}\n`;
       });
+
+      // Today's tasks listed underneath
+      pendingTasks.forEach(t => {
+        const mins = estimateTime(t.name);
+        totalMins += mins;
+        text += `• ${t.name} (${fmtMins(mins)})\n`;
+      });
+
       text += '\n';
     }
+
+    // "Planning to kick off" = not-started goals
     if (notStarted.length) {
       text += "I'm also planning to kick off:\n";
       notStarted.forEach(g => {
         const output = g.detail || generateOutput(g.title);
         const mins   = estimateTime(g.title);
-        totalGoalMins += mins;
+        totalMins += mins;
         text += `• ${g.title} (${fmtMins(mins)})\n  → ${output}\n`;
       });
       text += '\n';
     }
 
     // Time summary
-    if (activeGoals.length) {
-      const taskMins = pendingTasks.length * 20; // rough 20 min avg per task
-      const grandTotal = totalGoalMins + taskMins;
-      text += `⏱ Estimated time for goals: ${fmtMins(totalGoalMins)}`;
-      if (pendingTasks.length) text += ` + ${fmtMins(taskMins)} for ${pendingTasks.length} task${pendingTasks.length !== 1 ? 's' : ''} = ${fmtMins(grandTotal)} total`;
-      text += '\n\n';
-    }
-
-    // Tasks section
-    if (highTasks.length) {
-      text += "Top priorities for today:\n";
-      highTasks.forEach(t => { text += `• ${t.name}\n`; });
-      text += '\n';
-    }
-    if (otherTasks.length) {
-      text += "Also on my plate:\n";
-      otherTasks.slice(0, 6).forEach(t => { text += `• ${t.name}\n`; });
-      if (otherTasks.length > 6) text += `• ...and ${otherTasks.length - 6} more\n`;
-      text += '\n';
+    if (totalMins > 0) {
+      text += `⏱ Estimated time for today: ${fmtMins(totalMins)}\n\n`;
     }
 
     text += "I'll keep you posted as things move along!";
