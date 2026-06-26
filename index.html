@@ -552,6 +552,38 @@
     .checkout-output-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; font-size: 0.82rem; color: var(--text2); line-height: 1.8; white-space: pre-wrap; font-family: inherit; display: none; max-width: 800px; margin: 0 auto 16px; }
     .checkout-output-box.visible { display: block; }
 
+    /* ── AI Learning Tab ── */
+    .ai-stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+    .ai-stat-chip {
+      background:var(--surface); border:1.5px solid var(--border); border-radius:12px;
+      padding:12px 18px; min-width:130px; flex:1;
+      box-shadow:0 2px 8px rgba(0,0,0,0.07);
+    }
+    .ai-stat-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text3); margin-bottom:4px; }
+    .ai-stat-value { font-size:1.5rem; font-weight:800; color:var(--accent); }
+    .ai-stat-sub   { font-size:0.72rem; color:var(--text3); margin-top:2px; }
+    .streak-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      background:linear-gradient(135deg,#4c1d95,#7c3aed); color:#fff;
+      border-radius:20px; padding:6px 14px; font-size:0.82rem; font-weight:700;
+    }
+    .ai-proj-row { margin-bottom:8px; }
+    .ai-proj-label { display:flex; justify-content:space-between; font-size:0.78rem; font-weight:600; color:var(--text2); margin-bottom:4px; }
+    .ai-prog-bar { height:8px; background:var(--surface2); border-radius:6px; overflow:hidden; }
+    .ai-prog-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,#4c1d95,#7c3aed); transition:width 0.4s; }
+    .ai-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+    .ai-table th { background:var(--surface2); color:var(--text2); font-weight:700; text-align:left; padding:8px 10px; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; }
+    .ai-table td { padding:9px 10px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:top; }
+    .ai-table tr:last-child td { border-bottom:none; }
+    .ai-table tr:hover td { background:var(--surface2); }
+    .ai-act-badge { display:inline-block; font-size:0.65rem; font-weight:700; border-radius:20px; padding:2px 8px; background:rgba(76,29,149,0.14); color:var(--accent); white-space:nowrap; }
+    .ai-notes-cell { max-width:220px; color:var(--text2); font-size:0.75rem; }
+    .ai-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    @media(max-width:600px){ .ai-form-grid { grid-template-columns:1fr; } }
+    .ai-form-grid .full-span { grid-column:1/-1; }
+    .ai-delete-btn { background:none; border:none; color:var(--text3); cursor:pointer; font-size:0.9rem; padding:2px 6px; border-radius:6px; }
+    .ai-delete-btn:hover { background:rgba(220,38,38,0.1); color:var(--red); }
+
     /* ── Reports Tab ── */
     .report-output {
       background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
@@ -713,6 +745,7 @@
   <button class="tab-btn" onclick="switchTab('goals',this)">Goals &amp; Outputs</button>
   <button class="tab-btn" onclick="switchTab('checkout',this)">Daily Checkout</button>
   <button class="tab-btn" onclick="switchTab('reports',this)">Reports</button>
+  <button class="tab-btn" onclick="switchTab('ailearn',this)">🧠 AI Learning</button>
 </div>
 
 <!-- ═══ TAB 1: TASKS ═══ -->
@@ -904,6 +937,138 @@
   </div>
 </div>
 
+<!-- ═══ AI LEARNING TRACKER TAB ═══ -->
+<div class="tab-pane" id="tab-ailearn">
+
+  <!-- Stats Row -->
+  <div class="ai-stat-row" id="ai-stat-row">
+    <div class="ai-stat-chip">
+      <div class="ai-stat-label">Total Hours</div>
+      <div class="ai-stat-value" id="ai-total-hrs">0</div>
+      <div class="ai-stat-sub">across all projects</div>
+    </div>
+    <div class="ai-stat-chip">
+      <div class="ai-stat-label">Sessions Logged</div>
+      <div class="ai-stat-value" id="ai-total-sessions">0</div>
+      <div class="ai-stat-sub">total entries</div>
+    </div>
+    <div class="ai-stat-chip">
+      <div class="ai-stat-label">Current Streak</div>
+      <div class="ai-stat-value" id="ai-streak-val">0</div>
+      <div class="ai-stat-sub">consecutive days 🔥</div>
+    </div>
+    <div class="ai-stat-chip">
+      <div class="ai-stat-label">This Week</div>
+      <div class="ai-stat-value" id="ai-week-hrs">0</div>
+      <div class="ai-stat-sub">hours this week</div>
+    </div>
+  </div>
+
+  <!-- Log Form -->
+  <div class="card">
+    <div class="card-title">Log Today's Learning</div>
+    <div class="ai-form-grid">
+      <div>
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="ai-date" />
+      </div>
+      <div>
+        <label class="form-label">Project</label>
+        <select class="form-input" id="ai-project">
+          <option value="">Select project…</option>
+          <option>AI Learning Tracker</option>
+          <option>Email Spam Archiver</option>
+          <option>CORE</option>
+          <option>Restaurant Availability Tracker</option>
+          <option>Personal Invoice &amp; Payroll Forecaster</option>
+          <option>Tech Research Summarizer</option>
+          <option>Chrome Extension</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Activity Type</label>
+        <select class="form-input" id="ai-activity">
+          <option value="">Select activity…</option>
+          <option>Watching Tutorial</option>
+          <option>Building</option>
+          <option>Testing</option>
+          <option>Researching</option>
+          <option>Refining</option>
+          <option>Documenting</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Hours Spent</label>
+        <input type="number" class="form-input" id="ai-hours" placeholder="e.g. 1.5" min="0.1" max="24" step="0.25" />
+      </div>
+      <div class="full-span">
+        <label class="form-label">Tutorial / Resource Name</label>
+        <input type="text" class="form-input" id="ai-resource" placeholder="e.g. Fireship React course, MDN docs…" />
+      </div>
+      <div class="full-span">
+        <label class="form-label">Notes / What I Learned</label>
+        <textarea class="form-input" id="ai-notes" placeholder="Key takeaways, things to revisit, questions that came up…" style="min-height:80px;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <button class="primary-btn" onclick="addAILog()">+ Add Log Entry</button>
+  </div>
+
+  <!-- Hours per Project -->
+  <div class="card">
+    <div class="card-title">Hours by Project</div>
+    <div id="ai-project-bars">
+      <p style="color:var(--text3);font-size:0.82rem;">No logs yet — start tracking to see your progress here.</p>
+    </div>
+  </div>
+
+  <!-- History Table -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+      <div class="card-title" style="margin-bottom:0;">Log History</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select class="form-input" id="ai-filter-project" onchange="renderAILogs()" style="padding:5px 10px;font-size:0.78rem;width:auto;">
+          <option value="">All Projects</option>
+          <option>AI Learning Tracker</option>
+          <option>Email Spam Archiver</option>
+          <option>CORE</option>
+          <option>Restaurant Availability Tracker</option>
+          <option>Personal Invoice &amp; Payroll Forecaster</option>
+          <option>Tech Research Summarizer</option>
+          <option>Chrome Extension</option>
+        </select>
+        <select class="form-input" id="ai-filter-activity" onchange="renderAILogs()" style="padding:5px 10px;font-size:0.78rem;width:auto;">
+          <option value="">All Activities</option>
+          <option>Watching Tutorial</option>
+          <option>Building</option>
+          <option>Testing</option>
+          <option>Researching</option>
+          <option>Refining</option>
+          <option>Documenting</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="ai-table" id="ai-log-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Project</th>
+            <th>Activity</th>
+            <th>Resource</th>
+            <th>Hrs</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ai-log-body">
+          <tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px;">No entries yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- end tab-ailearn -->
+
 <!-- ═══ GOOGLE SHEETS (bottom) ═══ -->
 <div class="collapsible">
   <div class="collapsible-header" onclick="toggleSheets()">
@@ -1027,17 +1192,21 @@
         dailyNotes    = d.dailyNotes    || {};
         nextTaskId    = d.nextTaskId    || 1;
         nextGoalId    = d.nextGoalId    || 1;
+        aiLogs        = d.aiLogs        || [];
+        nextLogId     = d.nextLogId     || 1;
         showIndicator('');
       } else {
         // First time — migrate any existing localStorage data
         const localTasks = localStorage.getItem('mtt_tasks');
         if (localTasks) {
           tasks         = JSON.parse(localTasks);
-          goals         = JSON.parse(localStorage.getItem('mtt_goals') || '[]');
-          completionLog = JSON.parse(localStorage.getItem('mtt_log')   || '[]');
-          dailyNotes    = JSON.parse(localStorage.getItem('mtt_notes') || '{}');
-          nextTaskId    = parseInt(localStorage.getItem('mtt_tid')     || '1');
-          nextGoalId    = parseInt(localStorage.getItem('mtt_gid')     || '1');
+          goals         = JSON.parse(localStorage.getItem('mtt_goals')  || '[]');
+          completionLog = JSON.parse(localStorage.getItem('mtt_log')    || '[]');
+          dailyNotes    = JSON.parse(localStorage.getItem('mtt_notes')  || '{}');
+          nextTaskId    = parseInt(localStorage.getItem('mtt_tid')      || '1');
+          nextGoalId    = parseInt(localStorage.getItem('mtt_gid')      || '1');
+          aiLogs        = JSON.parse(localStorage.getItem('mtt_ailogs') || '[]');
+          nextLogId     = parseInt(localStorage.getItem('mtt_lid')      || '1');
           await saveToCloud();
         }
         showIndicator('');
@@ -1061,6 +1230,7 @@
     try {
       await db.collection('users').doc(currentUser.uid).set({
         tasks, goals, completionLog, dailyNotes, nextTaskId, nextGoalId,
+        aiLogs, nextLogId,
         updatedAt: new Date().toISOString()
       });
       showIndicator('Saved &#10003;');
@@ -1083,15 +1253,19 @@
   let dailyNotes    = {};
   let nextTaskId    = 1;
   let nextGoalId    = 1;
+  let aiLogs        = [];
+  let nextLogId     = 1;
 
   function save() {
     // Always cache locally too
-    localStorage.setItem('mtt_tasks', JSON.stringify(tasks));
-    localStorage.setItem('mtt_goals', JSON.stringify(goals));
-    localStorage.setItem('mtt_log',   JSON.stringify(completionLog));
-    localStorage.setItem('mtt_notes', JSON.stringify(dailyNotes));
-    localStorage.setItem('mtt_tid',   String(nextTaskId));
-    localStorage.setItem('mtt_gid',   String(nextGoalId));
+    localStorage.setItem('mtt_tasks',   JSON.stringify(tasks));
+    localStorage.setItem('mtt_goals',   JSON.stringify(goals));
+    localStorage.setItem('mtt_log',     JSON.stringify(completionLog));
+    localStorage.setItem('mtt_notes',   JSON.stringify(dailyNotes));
+    localStorage.setItem('mtt_tid',     String(nextTaskId));
+    localStorage.setItem('mtt_gid',     String(nextGoalId));
+    localStorage.setItem('mtt_ailogs',  JSON.stringify(aiLogs));
+    localStorage.setItem('mtt_lid',     String(nextLogId));
     scheduleCloudSave();
   }
 
@@ -1116,6 +1290,7 @@
     if (tab === 'checkout') renderCheckout();
     if (tab === 'goals')    { renderGoals(); document.getElementById('draft-date').value = todayISO; refreshTaskDraft(); }
     if (tab === 'reports')  { loadNotes(); generateMorningSMS(); }
+    if (tab === 'ailearn')  { renderAILogs(); renderAIStats(); }
   }
 
   // ═══ HELPERS ══════════════════════════════════════════════════════
@@ -2023,6 +2198,164 @@
       const toggle = document.getElementById('theme-toggle');
       if (toggle) toggle.checked = true;
     }
+  })();
+
+  // ═══ AI LEARNING TRACKER ═════════════════════════════════════════
+
+  const AI_PROJECTS = [
+    'AI Learning Tracker','Email Spam Archiver','CORE',
+    'Restaurant Availability Tracker','Personal Invoice & Payroll Forecaster',
+    'Tech Research Summarizer','Chrome Extension'
+  ];
+
+  // Colour palette per project (cycles)
+  const AI_PROJ_COLORS = [
+    '#4c1d95','#6d28d9','#7c3aed','#0369a1','#0891b2','#047857','#b45309'
+  ];
+
+  function addAILog() {
+    const date     = document.getElementById('ai-date').value;
+    const project  = document.getElementById('ai-project').value;
+    const activity = document.getElementById('ai-activity').value;
+    const resource = document.getElementById('ai-resource').value.trim();
+    const hours    = parseFloat(document.getElementById('ai-hours').value);
+    const notes    = document.getElementById('ai-notes').value.trim();
+
+    if (!date)    { alert('Please select a date.'); return; }
+    if (!project) { alert('Please select a project.'); return; }
+    if (!activity){ alert('Please select an activity type.'); return; }
+    if (!hours || isNaN(hours) || hours <= 0) { alert('Please enter valid hours.'); return; }
+
+    aiLogs.unshift({ id: nextLogId++, date, project, activity, resource, hours, notes, addedAt: new Date().toISOString() });
+    save();
+
+    // Clear form (keep date)
+    document.getElementById('ai-project').value  = '';
+    document.getElementById('ai-activity').value = '';
+    document.getElementById('ai-resource').value = '';
+    document.getElementById('ai-hours').value    = '';
+    document.getElementById('ai-notes').value    = '';
+
+    renderAILogs();
+    renderAIStats();
+  }
+
+  function deleteAILog(id) {
+    if (!confirm('Delete this log entry?')) return;
+    aiLogs = aiLogs.filter(l => l.id !== id);
+    save();
+    renderAILogs();
+    renderAIStats();
+  }
+
+  function renderAILogs() {
+    const filterProj = document.getElementById('ai-filter-project').value;
+    const filterAct  = document.getElementById('ai-filter-activity').value;
+
+    let filtered = aiLogs;
+    if (filterProj) filtered = filtered.filter(l => l.project === filterProj);
+    if (filterAct)  filtered = filtered.filter(l => l.activity === filterAct);
+
+    const tbody = document.getElementById('ai-log-body');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="color:var(--text3);text-align:center;padding:20px;">No entries match your filter.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(l => {
+      const d = l.date ? new Date(l.date + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      const hrs = Number.isInteger(l.hours) ? l.hours : l.hours.toFixed(1);
+      return `<tr>
+        <td style="white-space:nowrap;font-size:0.78rem;">${esc(d)}</td>
+        <td style="font-weight:600;font-size:0.78rem;">${esc(l.project)}</td>
+        <td><span class="ai-act-badge">${esc(l.activity)}</span></td>
+        <td style="font-size:0.78rem;color:var(--text2);">${esc(l.resource || '—')}</td>
+        <td style="font-weight:700;color:var(--accent);">${hrs}h</td>
+        <td class="ai-notes-cell">${esc(l.notes || '—')}</td>
+        <td><button class="ai-delete-btn" onclick="deleteAILog(${l.id})">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderAIStats() {
+    const totalHrs     = aiLogs.reduce((s,l) => s + (l.hours||0), 0);
+    const totalSessions = aiLogs.length;
+
+    // Hours this week
+    const { start: wkStart, end: wkEnd } = getWeekRange();
+    const weekHrs = aiLogs
+      .filter(l => l.date >= wkStart && l.date <= wkEnd)
+      .reduce((s,l) => s + (l.hours||0), 0);
+
+    // Streak: consecutive days up to today with at least one log
+    const streak = computeAIStreak();
+
+    document.getElementById('ai-total-hrs').textContent     = Number.isInteger(totalHrs) ? totalHrs : totalHrs.toFixed(1);
+    document.getElementById('ai-total-sessions').textContent = totalSessions;
+    document.getElementById('ai-streak-val').textContent    = streak;
+    document.getElementById('ai-week-hrs').textContent      = Number.isInteger(weekHrs) ? weekHrs : weekHrs.toFixed(1);
+
+    // Per-project bars
+    const projHours = {};
+    AI_PROJECTS.forEach(p => projHours[p] = 0);
+    aiLogs.forEach(l => { if (projHours[l.project] !== undefined) projHours[l.project] += (l.hours||0); });
+
+    const maxHrs = Math.max(...Object.values(projHours), 0.1);
+    const barsContainer = document.getElementById('ai-project-bars');
+
+    const activeProjsExist = Object.values(projHours).some(v => v > 0);
+    if (!activeProjsExist) {
+      barsContainer.innerHTML = `<p style="color:var(--text3);font-size:0.82rem;">No logs yet — start tracking to see your progress here.</p>`;
+      return;
+    }
+
+    barsContainer.innerHTML = AI_PROJECTS.map((proj, i) => {
+      const hrs  = projHours[proj];
+      const pct  = Math.round((hrs / maxHrs) * 100);
+      const color = AI_PROJ_COLORS[i % AI_PROJ_COLORS.length];
+      const display = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+      return `<div class="ai-proj-row">
+        <div class="ai-proj-label">
+          <span>${esc(proj)}</span>
+          <span style="color:${color};font-weight:700;">${display}h</span>
+        </div>
+        <div class="ai-prog-bar">
+          <div class="ai-prog-fill" style="width:${pct}%;background:${color};"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function computeAIStreak() {
+    if (!aiLogs.length) return 0;
+    // Get unique logged dates as Set
+    const loggedDates = new Set(aiLogs.map(l => l.date));
+    let streak = 0;
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    // Start from today; if today has no log, start from yesterday
+    if (!loggedDates.has(d.toISOString().slice(0,10))) {
+      d.setDate(d.getDate() - 1);
+    }
+    while (loggedDates.has(d.toISOString().slice(0,10))) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
+  }
+
+  // Pre-load aiLogs from localStorage so they're available before cloud loads
+  (function preloadAILogs() {
+    const raw = localStorage.getItem('mtt_ailogs');
+    if (raw) { try { aiLogs = JSON.parse(raw); } catch(e){} }
+    const lid = localStorage.getItem('mtt_lid');
+    if (lid) nextLogId = parseInt(lid);
+  })();
+
+  // Set today's date as default on page load
+  (function initAIDate() {
+    const el = document.getElementById('ai-date');
+    if (el) el.value = todayISO;
   })();
 
   // ── Init ─────────────────────────────────────────────────────────
